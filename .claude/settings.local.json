@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm -v)",
+      "Bash(echo \"npm: $\\(npm -v 2>/dev/null || echo MISSING\\)\")",
+      "Bash(git --version)",
+      "Bash(echo \"git: $\\(git --version 2>/dev/null || echo MISSING\\)\")",
+      "Bash(psql --version)",
+      "Bash(docker --version)",
+      "Bash(echo \"docker: $\\(docker --version 2>/dev/null || echo MISSING\\)\")"
+    ]
+  }
+}
