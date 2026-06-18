@@ -35,11 +35,14 @@
 
 - [ ] **Step 1: Initialize the project**
 
-Run:
+Run (pin to Next 14 — the spec's approved version; `@latest` pulls Next 16 whose Promise-based route `params` and Tailwind v4 config break the idioms used throughout Plans 2–7):
 ```bash
-npx create-next-app@latest . --typescript --tailwind --app --eslint --src-dir=false --import-alias="@/*" --no-turbopack
+npx create-next-app@14 . --typescript --tailwind --app --eslint --src-dir=false --import-alias="@/*"
 ```
-When prompted to proceed in a non-empty directory, accept (the `docs/` folder is the only existing content and must be preserved).
+Notes:
+- `--no-turbopack` is not a valid flag on create-next-app@14; omit it.
+- npm rejects capital letters in a package name, and create-next-app derives the name from the directory (`Project`). If it refuses, scaffold into a temp dir with an explicit lowercase name (`npx create-next-app@14 quan-ly-nha-tro --typescript --tailwind --app --eslint --src-dir=false --import-alias="@/*"`) then move its contents into `G:/Project`, preserving the existing `docs/` folder.
+- create-next-app@14 produces `next.config.mjs`, `tailwind.config.ts`, and Tailwind v3 (`@tailwind base/components/utilities` in `globals.css`) — these match the rest of the plan. Delete any generated `app/page.tsx` default content later as the plan directs.
 
 - [ ] **Step 2: Add testing + utility dependencies**
 
