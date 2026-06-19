@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 const optionalStr = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  // formData.get() returns null for fields not present in the form (e.g. unitId
+  // is omitted for building scope) — treat null like an empty string → undefined.
+  (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional(),
 );
 

@@ -22,4 +22,9 @@ describe("maintenanceSchema", () => {
       name: "x", scope: "building", intervalDays: 0, startDate: "2026-06-01",
     }).success).toBe(false);
   });
+  it("accepts building scope when unitId is null (form omits the field → formData.get returns null)", () => {
+    expect(maintenanceSchema.safeParse({
+      name: "Vệ sinh bể nước", scope: "building", unitId: null, intervalDays: 90, startDate: "2026-06-01", notes: null,
+    }).success).toBe(true);
+  });
 });

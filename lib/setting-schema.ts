@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 const optionalStr = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  // formData.get() returns null for absent fields — treat null like "" → undefined.
+  (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
   z.string().optional(),
 );
 

@@ -12,15 +12,15 @@ const paymentSchema = z.object({
   paidAt: z.string().min(1),
   method: z.enum(["cash", "bank_transfer"]),
   confirmedBy: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().optional(),
   ),
   notes: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().optional(),
   ),
   receiptImageUrl: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
     z.string().optional(),
   ),
 });
