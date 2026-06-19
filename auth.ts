@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth-password";
+import { authConfig } from "@/auth.config";
 
 export async function authorizeCredentials(email: string, password: string) {
   const user = await db.user.findUnique({ where: { email } });
@@ -11,8 +12,7 @@ export async function authorizeCredentials(email: string, password: string) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
@@ -22,14 +22,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) token.role = (user as any).role;
-      return token;
-    },
-    session({ session, token }) {
-      if (session.user) (session.user as any).role = token.role;
-      return session;
-    },
-  },
 });

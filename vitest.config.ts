@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    setupFiles: ["./vitest.setup.ts"],
+    exclude: ["node_modules", "e2e"],
     server: {
       deps: {
         // Allow vitest to process next-auth so our aliases apply
