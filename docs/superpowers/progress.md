@@ -57,9 +57,12 @@ NOTE: pure-logic tasks must run `npm run build` too (downlevel-iteration spreads
 **✅ PLAN 5 COMPLETE** — maintenance due logic + schedule CRUD/completion logging.
 
 ## Plan 6 — Zalo Notifications
-- [ ] Task 1: Notification planner
-- [ ] Task 2: Zalo client + NotificationLog
-- [ ] Task 3: Cron dispatch route
+- [x] Task 1: Notification planner — complete (commit 4668ef0, review Approved, no issues). overdueKey/maintenanceKey(date-stamped)/buildOverdue+MaintenanceMessage (VN)/pendingNotifications (dedup via sentKeys, isDue gate before keying). 6/6, 69/69, build clean.
+NOTE: `next build` lints test files under lib/app/components — `as any` there is a build ERROR. Use `as unknown as T` or keep a typed `vi.fn()` ref for `.mock.calls`.
+- [x] Task 2: Zalo client + NotificationLog — complete (commit 1ca2f22, review High quality). NotificationLog model+migration (20260619064754_add_notification_log), sendZaloMessage (env token guard, correct URL/header/body, injectable fetch, error handling — fixed latent brief bug). 2/2, 71/71, build clean, no any.
+- [x] Task 3: Cron dispatch route — complete (commit eb70c61, review Ship). runNotifications (skip-no-admin, overdue filter via billStatusFor, dedup via NotificationLog, log-on-success-only, awaited sends), GET /api/cron/notify gated by CRON_SECRET (401 if unset/mismatch), middleware matcher now excludes api/cron, README note. 2/2, 73/73, build clean, no any. Minors: unbounded findMany (fine at scale); README wording "optional". CI note: run `prisma generate` before build.
+
+**✅ PLAN 6 COMPLETE** — notification planner, Zalo client, secret-protected cron dispatch.
 
 ## Plan 7 — Dashboard & Settings
 - [ ] Task 1: Dashboard stats logic
