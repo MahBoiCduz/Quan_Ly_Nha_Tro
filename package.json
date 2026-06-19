@@ -2,17 +2,20 @@
   "name": "quan-ly-nha-tro",
   "version": "0.1.0",
   "private": true,
+  "prisma": { "seed": "tsx prisma/seed.ts" },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/client": "^7.8.0",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "next": "14.2.35",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -33,6 +37,7 @@
     "postcss": "^8",
     "prisma": "^7.8.0",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.22.4",
     "typescript": "^5",
     "vitest": "^4.1.9"
   },
