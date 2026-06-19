@@ -150,3 +150,8 @@ model Setting {
   invoiceNotes    String?
   adminZaloUserId String?
 }
+
+model NotificationLog {
+  key    String   @id
+  sentAt DateTime @default(now())
+}
