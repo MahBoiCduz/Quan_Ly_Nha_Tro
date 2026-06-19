@@ -37,7 +37,7 @@ const db = new PrismaClient({ adapter });
 ## Plan 3 — Billing & Invoice
 - [x] Task 1: Billing calc logic — complete (commit dfd17a0, review Approved). Pure helpers (lineTotal, buildDefaultLineItems w/ rent line, computeSubtotal [excludes elec/water structurally], computeGrandTotal, billStatusFor [paid>overdue>unpaid precedence]); 7/7 billing, 36 total. Minors: rent-line measureUnit not asserted in test; small test numbers.
 - [x] Task 2: Generate bill — complete (commit 410cabb, review Approved/ship-it). billGenerateSchema (TDD), generateBill validates+errors-if-no-active-lease, snapshots lineItems (Json array, no stringify), subtotal excl elec/water + grandTotal incl, status unpaid, redirect; list w/ VN status labels; new page occupied-only. 39/39. Minors (triage): reviewer flagged redirect-from-client-action (works in Next14, same as tenant-create, framework-handled — non-issue); missing negative-water/missing-field tests; STATUS_LABEL no fallback.
-- [ ] Task 3: Bill detail + payments
+- [x] Task 3: Bill detail + payments — complete (commits 4adecc5 + bdb231a cleanup, review Approved). totalPaid+recordPayment (TDD), status recompute uses fresh payments (re-fetch after create), detail page renders snapshotted lineItems + totals + payments + panel, receipt upload, Xuất PDF link. 41/41. Next14 adaptations: per-function "use server" (sync totalPaid OK), PaymentPanel takes action prop (self-contained, no downstream consumer). FIX: removed dead payment-utils.ts. Minor: amount="" → generic error.
 - [ ] Task 4: Invoice PDF
 
 ## Plan 4 — Ledger & Expenses
