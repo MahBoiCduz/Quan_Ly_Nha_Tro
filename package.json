@@ -11,6 +11,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "better-sqlite3": "^12.11.1",
+    "dotenv": "^17.4.2",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
@@ -27,8 +31,14 @@
     "eslint-config-next": "14.2.35",
     "jsdom": "^29.1.1",
     "postcss": "^8",
+    "prisma": "^7.8.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.1.9"
+  },
+  "allowScripts": {
+    "prisma@7.8.0": true,
+    "@prisma/engines@7.8.0": true,
+    "better-sqlite3@12.11.1": true
   }
 }

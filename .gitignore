@@ -1,5 +1,14 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# local SQLite database (binary; regenerated via prisma migrate + seed)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# local review artifacts
+docs/superpowers/.review-*.diff
+
 # dependencies
 /node_modules
 /.pnp
@@ -39,3 +48,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/lib/generated/prisma

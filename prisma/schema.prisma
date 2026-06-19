@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// NOTE: SQLite does not support Prisma `enum` types, so the following columns
+// are plain `String`. Allowed values (enforced in the app via zod schemas):
+//   Unit.type:           "room" | "commercial"
+//   Unit.status:         "occupied" | "vacant"
+//   Lease.billingCycle:  "monthly" | "quarterly" | "custom"
+//   Bill.status:         "unpaid" | "paid" | "overdue"
+//   Payment.method:      "cash" | "bank_transfer"
+//   User.role:           "admin"
+
+model Unit {
+  id           String        @id @default(cuid())
+  name         String
+  floor        Int
+  type         String
+  baseRent     Int
+  status       String        @default("vacant")
+  serviceItems ServiceItem[]
+  leases       Lease[]
+  maintenance  MaintenanceSchedule[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model ServiceItem {
+  id           String  @id @default(cuid())
+  unit         Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId       String
+  name         String
+  measureUnit  String
+  defaultPrice Int
+}
+
+model Tenant {
+  id                  String   @id @default(cuid())
+  fullName            String
+  phone               String
+  idCardNumber        String?
+  idCardFrontImageUrl String?
+  idCardBackImageUrl  String?
+  vehiclePlate        String?
+  zaloId              String?
+  notes               String?
+  leases              Lease[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Lease {
+  id                String       @id @default(cuid())
+  unit              Unit         @relation(fields: [unitId], references: [id])
+  unitId            String
+  tenant            Tenant       @relation(fields: [tenantId], references: [id])
+  tenantId          String
+  startDate         DateTime
+  endDate           DateTime?
+  agreedRent        Int
+  billingCycle      String       @default("monthly")
+  depositAmount     Int          @default(0)
+  depositCollectedAt DateTime?
+  depositCollectedBy String?
+  bills             Bill[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model Bill {
+  id                String     @id @default(cuid())
+  lease             Lease      @relation(fields: [leaseId], references: [id])
+  leaseId           String
+  periodLabel       String
+  dueDate           DateTime
+  status            String     @default("unpaid")
+  lineItems         Json
+  electricityAmount Int        @default(0)
+  waterAmount       Int        @default(0)
+  subtotal          Int        @default(0)
+  grandTotal        Int        @default(0)
+  payments          Payment[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  bill            Bill          @relation(fields: [billId], references: [id])
+  billId          String
+  amount          Int
+  paidAt          DateTime
+  method          String
+  confirmedBy     String?
+  notes           String?
+  receiptImageUrl String?
+  createdAt       DateTime      @default(now())
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime
+  description String
+  category    String
+  amount      Int
+  createdAt   DateTime @default(now())
+}
+
+model MaintenanceSchedule {
+  id           String            @id @default(cuid())
+  name         String
+  scope        String
+  unit         Unit?             @relation(fields: [unitId], references: [id])
+  unitId       String?
+  intervalDays Int
+  lastDoneAt   DateTime?
+  nextDueAt    DateTime
+  notes        String?
+  logs         MaintenanceLog[]
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model MaintenanceLog {
+  id         String              @id @default(cuid())
+  schedule   MaintenanceSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  scheduleId String
+  doneAt     DateTime
+  notes      String?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+model Setting {
+  id              String  @id @default("singleton")
+  bankAccountName String?
+  bankAccountNo   String?
+  bankName        String?
+  qrImageUrl      String?
+  invoiceNotes    String?
+  adminZaloUserId String?
+}

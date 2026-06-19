@@ -6,7 +6,7 @@ DB switched to **SQLite** (no Postgres/Docker on machine; user-approved 2026-06-
 Tasks marked complete below are DONE — do not re-dispatch. Resume at the first unmarked task.
 
 ## Plan 1 — Foundation & Auth
-- [ ] Task 1: Scaffold Next.js + Tailwind + Vitest
+- [x] Task 1: Scaffold Next.js + Tailwind + Vitest — complete (commits 3eb269e re-scaffold on Next 14.2.35 + e9ce662 fix; review approved). Note: original fb165dc scaffolded Next 16 by mistake → re-pinned to 14.
 - [ ] Task 2: Prisma setup + complete schema (SQLite)
 - [ ] Task 3: Seed admin + 16 units
 - [ ] Task 4: Admin auth (Auth.js v5)
@@ -46,4 +46,5 @@ Tasks marked complete below are DONE — do not re-dispatch. Resume at the first
 - [ ] Task 4: End-to-end flow test
 
 ## Minor findings (for final review triage)
-(none yet)
+- P1T1: vitest pinned at v4 (much newer than typical Next14 setups) — no observed breakage, watch for incompatibilities.
+- P1T1: app/layout.tsx still has default "Create Next App" metadata — superseded by Plan 1 Task 5 Step 8 (sets title to "Quản Lý Nhà Trọ"); verify there.
