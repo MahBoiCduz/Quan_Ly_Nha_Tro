@@ -65,7 +65,7 @@ export function monthlySummary(
     acc.expense += r.expense;
     map.set(month, acc);
   }
-  return [...map.entries()]
+  return Array.from(map.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, v]) => ({ month, ...v }));
 }
