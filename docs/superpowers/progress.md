@@ -43,9 +43,12 @@ const db = new PrismaClient({ adapter });
 **✅ PLAN 3 COMPLETE** — billing calc, generate bill, payments+status, Vietnamese invoice PDF.
 
 ## Plan 4 — Ledger & Expenses
-- [ ] Task 1: Ledger derivation logic
-- [ ] Task 2: Expense logging
-- [ ] Task 3: Ledger view + Excel export
+- [x] Task 1: Ledger derivation logic — complete (commit 4e5224f, review Accepted, zero issues). allocatePaymentIncome (money-conserving integer split), buildLedger (sort+running balance), monthlySummary (YYYY-MM). 5/5 ledger, 47/47 total.
+- [x] Task 2: Expense logging — complete (commit 8669a88, review Ship). expenseSchema + EXPENSE_CATEGORIES (TDD), create/delete validate+revalidate both /chi-tieu & /so-sach, page form+table. 51/51, build clean. Also fixed latent ledger.ts build error ([...map.entries()]→Array.from — Task 1 only ran vitest not build). deleteExpense returns void (Next14 form typing). Minors: explicit return-type annotation; category test checks 1 item.
+NOTE: pure-logic tasks must run `npm run build` too (downlevel-iteration spreads fail TS target) — Plan5/6/7 logic tasks flagged.
+- [x] Task 3: Ledger view + Excel export — complete (commit 509f007, review Solid/Pass). loadLedgerInputs (TDD, maps payments+expenses), /so-sach page w/ mom's 7 columns + running balance + monthly summary, /so-sach/export xlsx route. 52/52, build clean. db mock typed via `as unknown as PrismaClient` (no any). Minor: zero-income coerces to "".
+
+**✅ PLAN 4 COMPLETE** — ledger logic, expenses, ledger view + Excel export (replaces mom's Google Sheet).
 
 ## Plan 5 — Maintenance
 - [ ] Task 1: Maintenance due logic
