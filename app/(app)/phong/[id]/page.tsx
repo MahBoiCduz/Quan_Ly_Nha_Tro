@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { formatVND } from "@/lib/format";
 import { getActiveLease } from "@/lib/rooms";
 import { ServiceEditor } from "./service-editor";
+import { LeasePanel } from "./lease-panel";
 
 export default async function RoomDetailPage({ params }: { params: { id: string } }) {
   const unit = await db.unit.findUnique({
@@ -15,6 +15,13 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
   if (!unit) notFound();
 
   const lease = getActiveLease(unit.leases);
+  const tenants = await db.tenant.findMany({ orderBy: { fullName: "asc" }, select: { id: true, fullName: true } });
+  const activeLease = lease
+    ? {
+        id: lease.id, agreedRent: lease.agreedRent, depositAmount: lease.depositAmount,
+        startDate: lease.startDate.toISOString(), tenant: { fullName: lease.tenant.fullName },
+      }
+    : null;
 
   return (
     <div>
@@ -26,14 +33,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
 
       <section className="mb-6">
         <h2 className="mb-2 font-semibold">Khách thuê hiện tại</h2>
-        {lease ? (
-          <div className="rounded border bg-white p-3">
-            <div>{lease.tenant.fullName} · {lease.tenant.phone}</div>
-            <div className="text-sm text-gray-500">Giá thuê: {formatVND(lease.agreedRent)}</div>
-          </div>
-        ) : (
-          <p className="text-sm text-gray-400">Chưa có khách thuê.</p>
-        )}
+        <LeasePanel unitId={unit.id} tenants={tenants} activeLease={activeLease} />
       </section>
 
       <section>
