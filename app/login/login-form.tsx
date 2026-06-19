@@ -23,13 +23,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <input name="email" type="email" placeholder="Email" required
-        className="w-full rounded border px-3 py-2" />
-      <input name="password" type="password" placeholder="Mật khẩu" required
-        className="w-full rounded border px-3 py-2" />
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button type="submit"
-        className="w-full rounded bg-blue-600 py-2 text-white hover:bg-blue-700">
+      <input name="email" type="email" placeholder="Email" required className="input" />
+      <input name="password" type="password" placeholder="Mật khẩu" required className="input" />
+      {error && (
+        <p className="rounded-xl bg-danger-tint px-3 py-2 text-sm font-medium text-danger-ink">{error}</p>
+      )}
+      <button type="submit" className="btn-primary w-full">
         Đăng nhập
       </button>
     </form>

@@ -2,22 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Fixed warm light theme — never inverts with the OS dark-mode preference
+   (the old create-next-app default flipped text to white → white-on-white). */
+html {
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #faf9f5;
+  color: #141413;
+  font-family: var(--font-be-vietnam), system-ui, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+@layer base {
+  h1 {
+    @apply text-2xl font-semibold text-ink;
+  }
+  h2 {
+    @apply text-lg font-semibold text-ink;
+  }
+  h3 {
+    @apply text-base font-semibold text-ink;
+  }
+  a {
+    @apply text-brand-ink;
+  }
+  /* Sensible defaults so even un-classed controls are legible + comfortable */
+  input,
+  select,
+  textarea {
+    @apply text-ink;
+  }
+}
+
+@layer components {
+  /* Buttons — large (44px), rounded, with hover + active + focus states */
+  .btn {
+    @apply inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:bg-brand-dark;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-surface text-ink hover:bg-cream;
+  }
+  .btn-danger {
+    @apply btn bg-danger text-white hover:opacity-90;
+  }
+  /* Inline "delete" / text action */
+  .btn-link-danger {
+    @apply inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-danger transition-colors hover:text-danger-ink hover:underline;
+  }
+
+  /* Form controls — 44px tall, rounded, clear focus ring */
+  .input {
+    @apply h-11 w-full rounded-xl border border-line bg-surface px-3 text-[15px] text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+  }
+  textarea.input {
+    @apply h-auto min-h-[88px] py-2;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-muted;
+  }
+
+  /* Surfaces */
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .badge-ok {
+    @apply badge bg-ok-tint text-ok-ink;
+  }
+  .badge-warn {
+    @apply badge bg-warn-tint text-warn-ink;
+  }
+  .badge-danger {
+    @apply badge bg-danger-tint text-danger-ink;
+  }
+  .badge-muted {
+    @apply badge bg-line/60 text-muted;
+  }
 }
 
 @layer utilities {
