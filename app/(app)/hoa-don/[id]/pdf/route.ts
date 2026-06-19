@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import { db } from "@/lib/db";
 import { buildInvoiceModel, InvoiceDocument } from "@/lib/invoice-pdf";
+import { qrDataUrl } from "@/app/(app)/cai-dat/setting-actions";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const bill = await db.bill.findUnique({
@@ -14,12 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
   const model = buildInvoiceModel(bill, bill.lease, bill.lease.unit, bill.lease.tenant, setting);
 
-  // Resolve a relative qr url to an absolute one so @react-pdf can fetch it.
-  // QR behind auth (/api/files) is left null until Plan 7 resolves this.
-  if (model.qrImageUrl?.startsWith("/")) {
-    // Leave null rather than resolving to an auth-protected URL that @react-pdf cannot access.
-    model.qrImageUrl = null;
-  }
+  model.qrImageUrl = await qrDataUrl(model.qrImageUrl);
 
   // Cast: InvoiceDocument wraps <Document>, but its props type ({ model }) isn't
   // structurally DocumentProps, which renderToBuffer's signature expects.
