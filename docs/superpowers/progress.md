@@ -19,9 +19,11 @@ const db = new PrismaClient({ adapter });
 ```
 - Plan 1 Task 3 seed (`prisma/seed.ts`) brief shows bare `new PrismaClient()` → WILL FAIL; use the adapter pattern above (or import the singleton).
 - Any other standalone client (scripts, tests that hit a real DB) needs the adapter too.
-- [ ] Task 3: Seed admin + 16 units
-- [ ] Task 4: Admin auth (Auth.js v5)
-- [ ] Task 5: App shell + Vietnamese nav
+- [x] Task 3: Seed admin + 16 units — complete (commit 213c76a, review Approved). Seeded 16 units (15 rooms + 1 gym) + 1 admin + 1 Setting, idempotent; auth-password TDD; 7/7 tests. Adapter fix applied to seed.ts. Minors (non-blocking): seed.ts hardcodes "dev.db" path vs lib/db.ts env approach; gym status "occupied" (per plan — gym is rented).
+- [x] Task 4: Admin auth (Auth.js v5) — complete (commit 8add262, review Approved). next-auth@beta credentials, JWT, secure (no path returns user without password check), VN login page, middleware protects routes; 10/10 tests, build clean. Minors (non-blocking, for final triage): vitest.config.ts aliases two Next.js *internal* paths (next/headers, next/navigation) that may shift on update; token.role uses `any` cast (JWT type not augmented) — conventional for Auth.js v5 beta.
+- [x] Task 5: App shell + Vietnamese nav — complete (commit 149f7f7, review Approved). NAV_ITEMS (8 routes), sidebar shell under app/(app)/, lang="vi"+title, Playwright smoke 1/1, 12/12 unit tests, build clean. Also fixed a real Task 4 edge-runtime bug: split `auth.config.ts` (edge-safe, no better-sqlite3) for middleware + `auth.ts` for API routes (standard Auth.js v5 pattern). Controller verified middleware matcher = `/((?!api/auth|_next/static|_next/image|favicon.ico).*)` and password security intact.
+
+**✅ PLAN 1 COMPLETE** — working authenticated app: Next14+Prisma7/SQLite, 16 units seeded, admin login, VN shell. Reminder for Plan 6 Task 3: add `api/cron` to the middleware matcher exclusion (already noted in that plan).
 
 ## Plan 2 — Rooms, Tenants & Leases
 - [ ] Task 1: Auth-protected upload/serving
