@@ -25,19 +25,19 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold">{unit.name}</h1>
-      <p className="mb-4 text-sm text-gray-500">
+      <h1 className="mb-1 text-2xl font-bold text-ink">{unit.name}</h1>
+      <p className="mb-4 text-sm text-muted">
         Tầng {unit.floor} · {unit.type === "room" ? "Phòng ở" : "Mặt bằng"} ·{" "}
         {unit.status === "occupied" ? "Đang thuê" : "Trống"}
       </p>
 
       <section className="mb-6">
-        <h2 className="mb-2 font-semibold">Khách thuê hiện tại</h2>
+        <h2 className="mb-2 font-semibold text-ink">Khách thuê hiện tại</h2>
         <LeasePanel unitId={unit.id} tenants={tenants} activeLease={activeLease} />
       </section>
 
       <section>
-        <h2 className="mb-2 font-semibold">Dịch vụ</h2>
+        <h2 className="mb-2 font-semibold text-ink">Dịch vụ</h2>
         <ServiceEditor unitId={unit.id} items={unit.serviceItems} />
       </section>
     </div>
