@@ -65,10 +65,12 @@ NOTE: `next build` lints test files under lib/app/components — `as any` there 
 **✅ PLAN 6 COMPLETE** — notification planner, Zalo client, secret-protected cron dispatch.
 
 ## Plan 7 — Dashboard & Settings
-- [ ] Task 1: Dashboard stats logic
-- [ ] Task 2: Settings + QR-on-PDF
-- [ ] Task 3: Dashboard page + notify button
-- [ ] Task 4: End-to-end flow test
+- [x] Task 1: Dashboard stats logic — complete (commit 06a68cb, review Approved, no issues). computeDashboardStats (occupied/vacant, outstanding=Σ positive remaining, overdueCount via billStatusFor, maintenanceDueCount via dueStatus≠ok). 74/74, build clean.
+- [x] Task 2: Settings + QR-on-PDF — complete (commit a1b888a, review High quality). settingSchema (all optional, empty→undefined), saveSettings upserts singleton, qrDataUrl (reads upload from disk → data URL, null-safe try/catch), settings form (bank/notes/zalo/QR upload), PDF route wired to qrDataUrl (template/Noto Sans intact). 77/77, build clean, no any. Minor (triage): settings form shows error msg in green.
+- [x] Task 3: Dashboard page + notify button — complete (commit 258a6c7, review Ship). Dashboard replaces placeholder: 4 stat cards (occupied/total, outstanding via formatVND, overdue, maintenance-due) + quick links + NotifyButton; /api/notify-now POST auth-gated (401 before runNotifications). 77/77, build clean, no any. Minors: notify error msg granularity; no button disabled state.
+- [x] Task 4: End-to-end flow test — complete (commit 47a1f9f + fix fc6bee9). e2e/flow.spec.ts PASSES the full convergence flow: login→tenant→lease Phòng 101→bill→payment→"Đã thu"→ledger. 78/78 unit, build clean. The E2E caught a REAL bug: formData.get() returns null for absent form fields but optional-field zod preprocessors only handled "" → lease creation failed (endDate absent). Agent fixed lease-schema; CONTROLLER then fixed the same cross-cutting hole in maintenance-schema (building-scope unitId null → was broken!), tenant-schema, setting-schema, payment-actions (commit fc6bee9 + regression test).
+
+**✅ PLAN 7 COMPLETE — ALL 7 PLANS / 24 TASKS DONE.** Working app verified end-to-end.
 
 ## Minor findings (for final review triage)
 - P1T1: vitest pinned at v4 (much newer than typical Next14 setups) — no observed breakage, watch for incompatibilities.
