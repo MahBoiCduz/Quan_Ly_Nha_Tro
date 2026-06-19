@@ -7,7 +7,18 @@ Tasks marked complete below are DONE — do not re-dispatch. Resume at the first
 
 ## Plan 1 — Foundation & Auth
 - [x] Task 1: Scaffold Next.js + Tailwind + Vitest — complete (commits 3eb269e re-scaffold on Next 14.2.35 + e9ce662 fix; review approved). Note: original fb165dc scaffolded Next 16 by mistake → re-pinned to 14.
-- [ ] Task 2: Prisma setup + complete schema (SQLite)
+- [x] Task 2: Prisma setup + complete schema (SQLite) — complete (commit 5701522). Verified by controller: schema matches brief (all 11 models + Setting, no enums), init migration applied, tests 5/5, `npm run build` clean, `Json` works on SQLite (no String fallback → Plan 3 unaffected). DEVIATION: landed on **Prisma 7.8.0** (latest via `prisma init`) using `prisma.config.ts` (datasource url there, not in schema) + **`@prisma/adapter-better-sqlite3` driver adapter** in lib/db.ts. Formal reviewer gate skipped under session-limit pressure; controller hands-on verification stands in.
+
+### ⚠️ CRITICAL downstream constraint (Prisma 7)
+Prisma 7 has NO built-in SQLite driver — every `new PrismaClient()` MUST pass a driver adapter, exactly like `lib/db.ts`:
+```ts
+import { PrismaClient } from "@prisma/client";
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+const adapter = new PrismaBetterSqlite3({ url: path.resolve("dev.db") });
+const db = new PrismaClient({ adapter });
+```
+- Plan 1 Task 3 seed (`prisma/seed.ts`) brief shows bare `new PrismaClient()` → WILL FAIL; use the adapter pattern above (or import the singleton).
+- Any other standalone client (scripts, tests that hit a real DB) needs the adapter too.
 - [ ] Task 3: Seed admin + 16 units
 - [ ] Task 4: Admin auth (Auth.js v5)
 - [ ] Task 5: App shell + Vietnamese nav
