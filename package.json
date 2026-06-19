@@ -2,7 +2,9 @@
   "name": "quan-ly-nha-tro",
   "version": "0.1.0",
   "private": true,
-  "prisma": { "seed": "tsx prisma/seed.ts" },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,6 +21,7 @@
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
     "next": "14.2.35",
+    "next-auth": "^5.0.0-beta.31",
     "react": "^18",
     "react-dom": "^18",
     "zod": "^4.4.3"
