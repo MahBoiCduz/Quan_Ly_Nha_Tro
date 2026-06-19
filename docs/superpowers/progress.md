@@ -26,11 +26,13 @@ const db = new PrismaClient({ adapter });
 **✅ PLAN 1 COMPLETE** — working authenticated app: Next14+Prisma7/SQLite, 16 units seeded, admin login, VN shell. Reminder for Plan 6 Task 3: add `api/cron` to the middleware matcher exclusion (already noted in that plan).
 
 ## Plan 2 — Rooms, Tenants & Leases
-- [ ] Task 1: Auth-protected upload/serving
-- [ ] Task 2: Rooms list + detail
-- [ ] Task 3: Service-item config
-- [ ] Task 4: Tenant CRUD + ID upload
-- [ ] Task 5: Lease assignment + status sync
+- [x] Task 1: Auth-protected upload/serving — complete (commits 1d80928 + 05dde1f fix; review found + we fixed an Important defect). Routes 401 unauth, MIME-validated, PII in gitignored uploads/, path-traversal-safe. FIX: sanitizeFilename was stripping hyphens → every file fetch 404'd (broke ID photos/receipts/QR); now preserves `-` with regression test. 16/16 tests. Minor (triage): uploadDir default absolute vs `./uploads` in .env.example.
+- [x] Task 2: Rooms list + detail — complete (commit 15812eb, review Approved). Pure helpers groupUnitsByFloor/getActiveLease (TDD), list grouped by floor + detail page, sync params (Next14), notFound, no editing. 20/20 tests. Minors (triage): no empty-array test for getActiveLease; list-page leases not ordered (harmless). `[...keys()]`→`Array.from` for TS target.
+- [x] Task 3: Service-item config — complete (commit 040995e, review Approved/ship-as-is). serviceItemSchema (TDD), add/delete server actions validate+revalidate, client editor, Task 2 page content preserved. 23/23 tests. Minors (triage): delete onClick has no error feedback; no optimistic update (revalidatePath refreshes on action resolve); no empty-measureUnit test; deleteServiceItem doesn't pre-validate id.
+- [x] Task 4: Tenant CRUD + ID upload — complete (commit e394af0, review Approved/ship-as-is). tenantSchema (TDD, empty→undefined coercion), create/update validate+revalidate+redirect, form uploads front+back to /api/upload (PII via auth routes, not public/), list+new+edit pages prefill. 26/26 tests. Minors (triage): I1 silent upload-failure (no error UI; data not corrupted — coerced to undefined); I2 updateTenant revalidates list not [id] (redirect refetches anyway); no upload loading state; img vs next/image (intentional).
+- [x] Task 5: Lease assignment + status sync — complete (commit a656db8, review Approved/shippable). leaseSchema (TDD), createLease/endLease atomic `$transaction` syncing unit.status occupied/vacant, panel toggles create vs end, detail page header+ServiceEditor preserved. 29/29 tests. Minors (triage): endLease lacks empty-date guard (HTML required mitigates); billingCycle select missing `required`; no optional-coercion test; double-assign guard deferred per plan.
+
+**✅ PLAN 2 COMPLETE** — rooms, service config, tenants+ID photos, leases with atomic status sync.
 
 ## Plan 3 — Billing & Invoice
 - [ ] Task 1: Billing calc logic
