@@ -35,8 +35,8 @@ const db = new PrismaClient({ adapter });
 **✅ PLAN 2 COMPLETE** — rooms, service config, tenants+ID photos, leases with atomic status sync.
 
 ## Plan 3 — Billing & Invoice
-- [ ] Task 1: Billing calc logic
-- [ ] Task 2: Generate bill
+- [x] Task 1: Billing calc logic — complete (commit dfd17a0, review Approved). Pure helpers (lineTotal, buildDefaultLineItems w/ rent line, computeSubtotal [excludes elec/water structurally], computeGrandTotal, billStatusFor [paid>overdue>unpaid precedence]); 7/7 billing, 36 total. Minors: rent-line measureUnit not asserted in test; small test numbers.
+- [x] Task 2: Generate bill — complete (commit 410cabb, review Approved/ship-it). billGenerateSchema (TDD), generateBill validates+errors-if-no-active-lease, snapshots lineItems (Json array, no stringify), subtotal excl elec/water + grandTotal incl, status unpaid, redirect; list w/ VN status labels; new page occupied-only. 39/39. Minors (triage): reviewer flagged redirect-from-client-action (works in Next14, same as tenant-create, framework-handled — non-issue); missing negative-water/missing-field tests; STATUS_LABEL no fallback.
 - [ ] Task 3: Bill detail + payments
 - [ ] Task 4: Invoice PDF
 
