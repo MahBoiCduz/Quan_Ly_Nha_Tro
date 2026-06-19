@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import type { LineItem } from "@/lib/billing";
+import { billStatusFor } from "@/lib/billing";
 import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
 
@@ -17,6 +18,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
 
   const items = bill.lineItems as unknown as LineItem[];
   const paid = bill.payments.reduce((s, p) => s + p.amount, 0);
+  const display = billStatusFor(bill.grandTotal, paid, bill.dueDate);
 
   return (
     <div className="space-y-6">
@@ -27,7 +29,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       </div>
       <p className="text-sm text-gray-500">
         Khách: {bill.lease.tenant.fullName} · {bill.lease.tenant.phone} ·
-        Trạng thái: {STATUS_LABEL[bill.status]}
+        Trạng thái: {STATUS_LABEL[display]}
       </p>
 
       <table className="w-full border bg-white text-sm">

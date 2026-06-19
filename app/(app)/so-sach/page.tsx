@@ -26,6 +26,7 @@ export default async function LedgerPage() {
             <th className="border px-2 py-1 text-right">Thu tiền phòng và DV</th>
             <th className="border px-2 py-1 text-right">Thu tiền điện nước</th>
             <th className="border px-2 py-1 text-right">Chi</th>
+            <th className="border px-2 py-1 text-right">Tổng thu</th>
             <th className="border px-2 py-1 text-right">Tồn</th>
           </tr>
         </thead>
@@ -44,12 +45,15 @@ export default async function LedgerPage() {
               <td className="border px-2 py-1 text-right text-red-600">
                 {r.expense ? formatVND(r.expense) : ""}
               </td>
+              <td className="border px-2 py-1 text-right">
+                {r.incomeRoom + r.incomeUtilities ? formatVND(r.incomeRoom + r.incomeUtilities) : ""}
+              </td>
               <td className="border px-2 py-1 text-right font-medium">{formatVND(r.balance)}</td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={7} className="px-2 py-2 text-center text-gray-400">
+              <td colSpan={8} className="px-2 py-2 text-center text-gray-400">
                 Chưa có giao dịch.
               </td>
             </tr>

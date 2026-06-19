@@ -15,6 +15,7 @@ export async function GET() {
     "Thu tiền phòng và DV": r.incomeRoom || "",
     "Thu tiền điện nước": r.incomeUtilities || "",
     Chi: r.expense || "",
+    "Tổng thu": (r.incomeRoom + r.incomeUtilities) || "",
     Tồn: r.balance,
   }));
 
