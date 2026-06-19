@@ -72,6 +72,13 @@ NOTE: `next build` lints test files under lib/app/components — `as any` there 
 
 **✅ PLAN 7 COMPLETE — ALL 7 PLANS / 24 TASKS DONE.** Working app verified end-to-end.
 
-## Minor findings (for final review triage)
+## FINAL WHOLE-BRANCH REVIEW (commit fa6527e reviewed) — Verdict: Ready to merge
+All 13 phase-1 features present; security layered correctly; money conserved; null-fix consistent; no Critical. Findings:
+- **Important #1 (FIXED, commit 791730e):** bills past due w/ no payment showed stale "Chưa thu" on list/detail pages (status only written on create/payment; dashboard+notifications computed live but bill pages read raw DB status). Fixed: list+detail now compute display status via billStatusFor(grandTotal, totalPaid, dueDate) at read time. Also added spec's "Tổng thu" ledger column (page + xlsx). 78/78, build clean.
+- Important #2 (no fix needed): no payment-delete path → status rollup only on create; consistent today, latent if delete added later.
+- Minor #4: overdueKey has no date component → overdue notified once (acceptable per design).
+- Known minors triaged as NON-blocking: uploadDir abs vs ./uploads (same dir); form UX gaps (intentional); unbounded findMany (fine at scale); pdf bill.lease guard (FK required, never null); vitest v4.
+
+## Minor findings (per-task, for reference)
 - P1T1: vitest pinned at v4 (much newer than typical Next14 setups) — no observed breakage, watch for incompatibilities.
 - P1T1: app/layout.tsx still has default "Create Next App" metadata — superseded by Plan 1 Task 5 Step 8 (sets title to "Quản Lý Nhà Trọ"); verify there.
