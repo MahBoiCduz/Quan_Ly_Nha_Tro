@@ -34,3 +34,24 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Thông báo Zalo
+
+Hệ thống hỗ trợ gửi thông báo tự động qua Zalo OA cho chủ nhà về hóa đơn quá hạn và lịch bảo trì đến hạn.
+
+Để kích hoạt, cấu hình các biến môi trường sau trong `.env`:
+
+```
+ZALO_OA_ACCESS_TOKEN=<token từ Zalo OA>
+CRON_SECRET=<chuỗi bí mật tùy chọn>
+```
+
+Sau đó, thiết lập một cron job gọi endpoint sau **một lần mỗi ngày** (ví dụ lúc 8 giờ sáng):
+
+```bash
+0 8 * * * curl -s "https://<host>/api/cron/notify?secret=$CRON_SECRET"
+```
+
+Endpoint trả về JSON: `{ sent, failed, skipped }`.
+
+> Lưu ý: `adminZaloUserId` phải được cấu hình trong bảng `Setting` (qua trang Cài đặt) để hệ thống biết gửi thông báo đến Zalo nào.
