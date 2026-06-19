@@ -6,6 +6,11 @@ describe("sanitizeFilename", () => {
     expect(sanitizeFilename("../../etc/passwd")).toBe("etc_passwd");
     expect(sanitizeFilename("anh cccd (1).jpg")).toBe("anh_cccd_1.jpg");
   });
+
+  it("preserves hyphens so stored uuid filenames round-trip", () => {
+    expect(sanitizeFilename("550e8400-e29b-41d4-a716-446655440000_test.jpg"))
+      .toBe("550e8400-e29b-41d4-a716-446655440000_test.jpg");
+  });
 });
 
 describe("isAllowedImage", () => {

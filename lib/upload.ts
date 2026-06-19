@@ -11,10 +11,10 @@ export function sanitizeFilename(name: string): string {
   // Then collapse all non-alphanumeric-non-dot chars to _
   // Then trim edge underscores and collapse _ before extension dot
   return name
-    .replace(/[\\/]+/g, "_")          // path separators → _
-    .replace(/[^a-zA-Z0-9._]+/g, "_") // unsafe chars → _
-    .replace(/^[_.]+|[_.]+$/g, "")    // trim leading/trailing _ and .
-    .replace(/_+(\.)/g, "$1");        // collapse _ before extension dot
+    .replace(/[\\/]+/g, "_")            // path separators → _
+    .replace(/[^a-zA-Z0-9._-]+/g, "_")  // unsafe chars → _ (hyphen preserved for UUIDs)
+    .replace(/^[_.]+|[_.]+$/g, "")      // trim leading/trailing _ and .
+    .replace(/_+(\.)/g, "$1");          // collapse _ before extension dot
 }
 
 export function uploadDir(): string {
