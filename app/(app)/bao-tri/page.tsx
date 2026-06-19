@@ -1,10 +1,13 @@
 import { db } from "@/lib/db";
 import { dueStatus } from "@/lib/maintenance";
 import { ScheduleForm } from "./schedule-form";
-import { markDone, deleteSchedule } from "./maintenance-actions";
+import { deleteSchedule } from "./maintenance-actions";
+import { MarkDoneForm } from "./mark-done-form";
+import { ActionButton } from "@/components/action-button";
+import { Trash2 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = { overdue: "Quá hạn", due_soon: "Sắp đến hạn", ok: "Bình thường" };
-const STATUS_COLOR: Record<string, string> = { overdue: "text-red-600", due_soon: "text-amber-600", ok: "text-gray-500" };
+const STATUS_BADGE: Record<string, string> = { overdue: "badge-danger", due_soon: "badge-warn", ok: "badge-muted" };
 
 export default async function MaintenancePage() {
   const [schedules, units] = await Promise.all([
@@ -14,45 +17,56 @@ export default async function MaintenancePage() {
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Bảo trì</h1>
+      <h1 className="mb-6 text-2xl font-bold text-ink">Bảo trì</h1>
       <ScheduleForm units={units} />
-      <table className="w-full border bg-white text-sm">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="border px-2 py-1 text-left">Công việc</th>
-            <th className="border px-2 py-1">Phạm vi</th>
-            <th className="border px-2 py-1">Chu kỳ</th>
-            <th className="border px-2 py-1">Lần tới</th>
-            <th className="border px-2 py-1">Trạng thái</th>
-            <th className="border px-2 py-1"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {schedules.map((s) => {
-            const st = dueStatus(s.nextDueAt);
-            return (
-              <tr key={s.id}>
-                <td className="border px-2 py-1">{s.name}</td>
-                <td className="border px-2 py-1 text-center">{s.scope === "unit" ? s.unit?.name : "Toàn nhà"}</td>
-                <td className="border px-2 py-1 text-center">{s.intervalDays} ngày</td>
-                <td className="border px-2 py-1 text-center">{s.nextDueAt.toLocaleDateString("vi-VN")}</td>
-                <td className={`border px-2 py-1 text-center ${STATUS_COLOR[st]}`}>{STATUS_LABEL[st]}</td>
-                <td className="border px-2 py-1 text-center">
-                  <form action={async (fd: FormData) => { "use server"; await markDone(s.id, String(fd.get("doneAt"))); }}
-                    className="flex items-center gap-1">
-                    <input name="doneAt" type="date" required className="rounded border px-1 py-0.5 text-xs" />
-                    <button className="rounded bg-green-600 px-2 py-0.5 text-xs text-white">Đã làm</button>
-                  </form>
-                  <form action={async () => { "use server"; await deleteSchedule(s.id); }} className="mt-1">
-                    <button className="text-xs text-red-600 hover:underline">Xóa</button>
-                  </form>
-                </td>
+      <div className="card overflow-hidden">
+        <table className="w-full text-[15px]">
+          <thead>
+            <tr className="bg-cream text-muted text-sm">
+              <th className="px-4 py-3 text-left font-medium">Công việc</th>
+              <th className="px-4 py-3 text-center font-medium">Phạm vi</th>
+              <th className="px-4 py-3 text-center font-medium">Chu kỳ</th>
+              <th className="px-4 py-3 text-center font-medium">Lần tới</th>
+              <th className="px-4 py-3 text-center font-medium">Trạng thái</th>
+              <th className="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedules.map((s) => {
+              const st = dueStatus(s.nextDueAt);
+              return (
+                <tr key={s.id} className="border-b border-line last:border-0">
+                  <td className="px-4 py-3 text-ink">{s.name}</td>
+                  <td className="px-4 py-3 text-center text-muted">{s.scope === "unit" ? s.unit?.name : "Toàn nhà"}</td>
+                  <td className="px-4 py-3 text-center text-muted">{s.intervalDays} ngày</td>
+                  <td className="px-4 py-3 text-center text-muted">{s.nextDueAt.toLocaleDateString("vi-VN")}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={STATUS_BADGE[st]}>{STATUS_LABEL[st]}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-2">
+                      <MarkDoneForm scheduleId={s.id} />
+                      <ActionButton
+                        action={async () => { await deleteSchedule(s.id); }}
+                        success="Đã xóa lịch"
+                        confirm="Xóa lịch bảo trì này?"
+                        className="btn-link-danger inline-flex items-center gap-1 text-sm"
+                      >
+                        <Trash2 size={16} />Xóa
+                      </ActionButton>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {schedules.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-4 py-4 text-center text-muted">Chưa có lịch bảo trì.</td>
               </tr>
-            );
-          })}
-          {schedules.length === 0 && <tr><td colSpan={6} className="px-2 py-2 text-center text-gray-400">Chưa có lịch bảo trì.</td></tr>}
-        </tbody>
-      </table>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
