@@ -9,7 +9,7 @@ export default async function TenantDetailPage({ params }: { params: { id: strin
   const action = updateTenant.bind(null, tenant.id);
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">{tenant.fullName}</h1>
+      <h1 className="mb-4">{tenant.fullName}</h1>
       <TenantForm tenant={tenant} action={action} />
     </div>
   );

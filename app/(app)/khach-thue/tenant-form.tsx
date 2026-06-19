@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/components/toast";
 
 type Tenant = {
   id?: string;
@@ -22,42 +23,82 @@ export function TenantForm({
 }: { tenant?: Tenant; action: (fd: FormData) => Promise<{ error?: string } | void> }) {
   const [front, setFront] = useState(tenant?.idCardFrontImageUrl ?? "");
   const [back, setBack] = useState(tenant?.idCardBackImageUrl ?? "");
-  const [error, setError] = useState("");
+  const toast = useToast();
 
   async function onSubmit(formData: FormData) {
-    setError("");
     formData.set("idCardFrontImageUrl", front);
     formData.set("idCardBackImageUrl", back);
     const res = await action(formData);
-    if (res?.error) setError(res.error);
+    if (res?.error) toast.error(res.error);
   }
 
   return (
     <form action={onSubmit} className="max-w-lg space-y-3">
-      <input name="fullName" defaultValue={tenant?.fullName ?? ""} placeholder="Họ tên" required className="w-full rounded border px-3 py-2" />
-      <input name="phone" defaultValue={tenant?.phone ?? ""} placeholder="Số điện thoại" required className="w-full rounded border px-3 py-2" />
-      <input name="idCardNumber" defaultValue={tenant?.idCardNumber ?? ""} placeholder="Số CCCD/CMND" className="w-full rounded border px-3 py-2" />
-      <input name="vehiclePlate" defaultValue={tenant?.vehiclePlate ?? ""} placeholder="Biển số xe" className="w-full rounded border px-3 py-2" />
-      <input name="zaloId" defaultValue={tenant?.zaloId ?? ""} placeholder="Zalo ID" className="w-full rounded border px-3 py-2" />
-      <textarea name="notes" defaultValue={tenant?.notes ?? ""} placeholder="Ghi chú" className="w-full rounded border px-3 py-2" />
-
-      <div className="grid grid-cols-2 gap-3">
-        <label className="text-sm">
-          Ảnh CCCD mặt trước
-          <input type="file" accept="image/*" className="mt-1 block"
-            onChange={async (e) => e.target.files?.[0] && setFront(await uploadImage(e.target.files[0]))} />
-          {front && <img src={front} alt="mặt trước" className="mt-1 h-24 rounded border object-cover" />}
-        </label>
-        <label className="text-sm">
-          Ảnh CCCD mặt sau
-          <input type="file" accept="image/*" className="mt-1 block"
-            onChange={async (e) => e.target.files?.[0] && setBack(await uploadImage(e.target.files[0]))} />
-          {back && <img src={back} alt="mặt sau" className="mt-1 h-24 rounded border object-cover" />}
-        </label>
+      <div>
+        <label className="label">Họ tên</label>
+        <input name="fullName" defaultValue={tenant?.fullName ?? ""} placeholder="Họ tên" required className="input" />
+      </div>
+      <div>
+        <label className="label">Số điện thoại</label>
+        <input name="phone" defaultValue={tenant?.phone ?? ""} placeholder="Số điện thoại" required className="input" />
+      </div>
+      <div>
+        <label className="label">Số CCCD/CMND</label>
+        <input name="idCardNumber" defaultValue={tenant?.idCardNumber ?? ""} placeholder="Số CCCD/CMND" className="input" />
+      </div>
+      <div>
+        <label className="label">Biển số xe</label>
+        <input name="vehiclePlate" defaultValue={tenant?.vehiclePlate ?? ""} placeholder="Biển số xe" className="input" />
+      </div>
+      <div>
+        <label className="label">Zalo ID</label>
+        <input name="zaloId" defaultValue={tenant?.zaloId ?? ""} placeholder="Zalo ID" className="input" />
+      </div>
+      <div>
+        <label className="label">Ghi chú</label>
+        <textarea name="notes" defaultValue={tenant?.notes ?? ""} placeholder="Ghi chú" className="input" />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button className="rounded bg-blue-600 px-4 py-2 text-white">Lưu</button>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">
+            Ảnh CCCD mặt trước
+          </label>
+          <input type="file" accept="image/*" className="mt-1 block text-sm text-muted"
+            onChange={async (e) => {
+              if (e.target.files?.[0]) {
+                try {
+                  const url = await uploadImage(e.target.files[0]);
+                  setFront(url);
+                  toast.success("Đã tải ảnh lên");
+                } catch {
+                  toast.error("Tải ảnh thất bại");
+                }
+              }
+            }} />
+          {front && <img src={front} alt="mặt trước" className="mt-1 h-24 rounded border object-cover" />}
+        </div>
+        <div>
+          <label className="label">
+            Ảnh CCCD mặt sau
+          </label>
+          <input type="file" accept="image/*" className="mt-1 block text-sm text-muted"
+            onChange={async (e) => {
+              if (e.target.files?.[0]) {
+                try {
+                  const url = await uploadImage(e.target.files[0]);
+                  setBack(url);
+                  toast.success("Đã tải ảnh lên");
+                } catch {
+                  toast.error("Tải ảnh thất bại");
+                }
+              }
+            }} />
+          {back && <img src={back} alt="mặt sau" className="mt-1 h-24 rounded border object-cover" />}
+        </div>
+      </div>
+
+      <button className="btn-primary">Lưu</button>
     </form>
   );
 }

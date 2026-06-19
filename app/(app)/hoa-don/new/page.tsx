@@ -9,7 +9,7 @@ export default async function NewBillPage() {
   });
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold">Tạo hóa đơn</h1>
+      <h1 className="mb-4">Tạo hóa đơn</h1>
       <GenerateForm units={units} />
     </div>
   );

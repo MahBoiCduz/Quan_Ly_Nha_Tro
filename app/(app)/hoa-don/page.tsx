@@ -2,8 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import { billStatusFor } from "@/lib/billing";
-
-const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã thu", overdue: "Quá hạn" };
+import { Plus } from "lucide-react";
 
 export default async function BillsPage() {
   const bills = await db.bill.findMany({
@@ -16,28 +15,41 @@ export default async function BillsPage() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Hóa đơn</h1>
-        <Link href="/hoa-don/new" className="rounded bg-blue-600 px-3 py-2 text-white">+ Tạo hóa đơn</Link>
+        <h1>Hóa đơn</h1>
+        <Link href="/hoa-don/new" className="btn-primary">
+          <Plus size={18} /> Tạo hóa đơn
+        </Link>
       </div>
-      <ul className="rounded border bg-white">
+      <ul className="card overflow-hidden">
         {bills.map((b) => {
           const totalPaid = b.payments.reduce((s, p) => s + p.amount, 0);
           const display = billStatusFor(b.grandTotal, totalPaid, b.dueDate);
+          const badgeClass =
+            display === "overdue" ? "badge-danger" :
+            display === "paid" ? "badge-ok" :
+            "badge-warn";
           return (
-            <li key={b.id} className="border-b last:border-0">
-              <Link href={`/hoa-don/${b.id}`} className="flex justify-between px-3 py-2 hover:bg-gray-50">
-                <span>{b.lease.unit.name} · {b.periodLabel} · {b.lease.tenant.fullName}</span>
-                <span className="flex gap-3">
-                  <span>{formatVND(b.grandTotal)}</span>
-                  <span className={display === "overdue" ? "text-red-600" : display === "paid" ? "text-green-600" : "text-gray-500"}>
-                    {STATUS_LABEL[display]}
+            <li key={b.id} className="border-b border-line last:border-0">
+              <Link
+                href={`/hoa-don/${b.id}`}
+                className="flex items-center justify-between px-4 py-3 text-[15px] hover:bg-cream"
+              >
+                <span className="text-ink">
+                  {b.lease.unit.name} · {b.periodLabel} · {b.lease.tenant.fullName}
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="text-ink">{formatVND(b.grandTotal)}</span>
+                  <span className={badgeClass}>
+                    {display === "overdue" ? "Quá hạn" : display === "paid" ? "Đã thu" : "Chưa thu"}
                   </span>
                 </span>
               </Link>
             </li>
           );
         })}
-        {bills.length === 0 && <li className="px-3 py-2 text-sm text-gray-400">Chưa có hóa đơn.</li>}
+        {bills.length === 0 && (
+          <li className="px-4 py-3 text-sm text-muted">Chưa có hóa đơn.</li>
+        )}
       </ul>
     </div>
   );
