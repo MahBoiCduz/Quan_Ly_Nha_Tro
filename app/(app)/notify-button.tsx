@@ -1,20 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { Bell } from "lucide-react";
+import { useToast } from "@/components/toast";
 
 export function NotifyButton() {
-  const [msg, setMsg] = useState("");
+  const [sending, setSending] = useState(false);
+  const toast = useToast();
+
   async function onClick() {
-    setMsg("Đang gửi...");
-    const res = await fetch("/api/notify-now", { method: "POST" });
-    setMsg(res.ok ? "Đã chạy thông báo." : "Không gửi được (kiểm tra cấu hình).");
+    setSending(true);
+    try {
+      const res = await fetch("/api/notify-now", { method: "POST" });
+      if (res.ok) {
+        toast.success("Đã gửi thông báo Zalo");
+      } else {
+        toast.error("Không gửi được — kiểm tra cấu hình Zalo");
+      }
+    } finally {
+      setSending(false);
+    }
   }
+
   return (
     <div>
-      <button onClick={onClick} className="rounded bg-indigo-600 px-3 py-2 text-white">
-        Gửi thông báo Zalo ngay
+      <button onClick={onClick} disabled={sending} className="btn-primary">
+        <Bell size={18} />
+        {sending ? "Đang gửi..." : "Gửi thông báo Zalo ngay"}
       </button>
-      {msg && <span className="ml-2 text-sm text-gray-600">{msg}</span>}
     </div>
   );
 }

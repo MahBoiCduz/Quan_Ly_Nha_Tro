@@ -3,12 +3,21 @@ import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import { computeDashboardStats } from "@/lib/dashboard";
 import { NotifyButton } from "./notify-button";
+import { Receipt, UserPlus, Wallet } from "lucide-react";
 
-function Card({ label, value, accent }: { label: string; value: string; accent?: string }) {
+function StatCard({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: string;
+}) {
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <div className="text-sm text-gray-500">{label}</div>
-      <div className={`mt-1 text-2xl font-bold ${accent ?? ""}`}>{value}</div>
+    <div className="rounded-2xl border border-line bg-surface p-5">
+      <div className="text-sm text-muted">{label}</div>
+      <div className={`mt-1 text-3xl font-semibold text-ink ${accent ?? ""}`}>{value}</div>
     </div>
   );
 }
@@ -26,31 +35,34 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Tổng quan</h1>
+      <h1>Tổng quan</h1>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Card label="Phòng đang thuê" value={`${stats.occupied}/${stats.occupied + stats.vacant}`} />
-        <Card label="Còn phải thu" value={formatVND(stats.outstanding)} />
-        <Card
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Phòng đang thuê" value={`${stats.occupied}/${stats.occupied + stats.vacant}`} />
+        <StatCard label="Còn phải thu" value={formatVND(stats.outstanding)} />
+        <StatCard
           label="Hóa đơn quá hạn"
           value={String(stats.overdueCount)}
-          accent={stats.overdueCount ? "text-red-600" : ""}
+          accent={stats.overdueCount ? "text-danger" : ""}
         />
-        <Card
+        <StatCard
           label="Bảo trì sắp đến hạn"
           value={String(stats.maintenanceDueCount)}
-          accent={stats.maintenanceDueCount ? "text-amber-600" : ""}
+          accent={stats.maintenanceDueCount ? "text-warn" : ""}
         />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/hoa-don/new" className="rounded bg-blue-600 px-3 py-2 text-white">
+        <Link href="/hoa-don/new" className="btn-primary">
+          <Receipt size={18} />
           Tạo hóa đơn
         </Link>
-        <Link href="/khach-thue/new" className="rounded bg-blue-600 px-3 py-2 text-white">
+        <Link href="/khach-thue/new" className="btn-primary">
+          <UserPlus size={18} />
           Thêm khách thuê
         </Link>
-        <Link href="/chi-tieu" className="rounded bg-blue-600 px-3 py-2 text-white">
+        <Link href="/chi-tieu" className="btn-primary">
+          <Wallet size={18} />
           Thêm chi tiêu
         </Link>
       </div>
