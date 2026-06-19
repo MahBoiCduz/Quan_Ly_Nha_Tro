@@ -51,8 +51,10 @@ NOTE: pure-logic tasks must run `npm run build` too (downlevel-iteration spreads
 **✅ PLAN 4 COMPLETE** — ledger logic, expenses, ledger view + Excel export (replaces mom's Google Sheet).
 
 ## Plan 5 — Maintenance
-- [ ] Task 1: Maintenance due logic
-- [ ] Task 2: Schedule CRUD + completion
+- [x] Task 1: Maintenance due logic — complete (commit ad88d81, review Approved, no issues). addDays/computeNextDue/isDue(>=)/dueStatus(overdue/due_soon≤7d/ok), non-mutating. 7/7, 59 total, build clean.
+- [x] Task 2: Schedule CRUD + completion — complete (commit 44a654a, review Ship). maintenanceSchema (refine: unit needs unitId), createSchedule/markDone(transaction: log + advance nextDue from doneAt)/deleteSchedule, page w/ dueStatus labels + mark-done + delete + scope-toggle form. 63/63, build clean. Minors: no form reset; TOCTOU read-before-tx (fine at scale).
+
+**✅ PLAN 5 COMPLETE** — maintenance due logic + schedule CRUD/completion logging.
 
 ## Plan 6 — Zalo Notifications
 - [ ] Task 1: Notification planner
