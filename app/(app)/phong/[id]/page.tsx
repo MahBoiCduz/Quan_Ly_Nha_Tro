@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import { getActiveLease } from "@/lib/rooms";
+import { ServiceEditor } from "./service-editor";
 
 export default async function RoomDetailPage({ params }: { params: { id: string } }) {
   const unit = await db.unit.findUnique({
@@ -37,18 +38,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
 
       <section>
         <h2 className="mb-2 font-semibold">Dịch vụ</h2>
-        {unit.serviceItems.length === 0 ? (
-          <p className="text-sm text-gray-400">Chưa cấu hình dịch vụ.</p>
-        ) : (
-          <ul className="rounded border bg-white">
-            {unit.serviceItems.map((s) => (
-              <li key={s.id} className="flex justify-between border-b px-3 py-2 last:border-0">
-                <span>{s.name} ({s.measureUnit})</span>
-                <span>{formatVND(s.defaultPrice)}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ServiceEditor unitId={unit.id} items={unit.serviceItems} />
       </section>
     </div>
   );
