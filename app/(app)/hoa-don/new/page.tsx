@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { BackLink } from "@/components/back-link";
 import { GenerateForm } from "../generate-form";
 
 export default async function NewBillPage() {
@@ -9,6 +10,7 @@ export default async function NewBillPage() {
   });
   return (
     <div>
+      <BackLink href="/hoa-don" label="Danh sách hóa đơn" />
       <h1 className="mb-4">Tạo hóa đơn</h1>
       <GenerateForm units={units} />
     </div>

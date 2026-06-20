@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getActiveLease } from "@/lib/rooms";
+import { BackLink } from "@/components/back-link";
 import { ServiceEditor } from "./service-editor";
 import { LeasePanel } from "./lease-panel";
 
@@ -25,6 +26,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
 
   return (
     <div>
+      <BackLink href="/phong" label="Danh sách phòng" />
       <h1 className="mb-1 text-2xl font-bold text-ink">{unit.name}</h1>
       <p className="mb-4 text-sm text-muted">
         Tầng {unit.floor} · {unit.type === "room" ? "Phòng ở" : "Mặt bằng"} ·{" "}

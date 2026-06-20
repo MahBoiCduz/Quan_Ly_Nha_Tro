@@ -16,8 +16,8 @@ async function main() {
     create: { email: adminEmail, passwordHash: await hashPassword(adminPassword), role: "admin" },
   });
 
-  // 15 rooms: floors 1-3, rooms x01..x05 per floor.
-  for (const floor of [1, 2, 3]) {
+  // 15 rooms on floors 2-4: 201..205, 301..305, 401..405 (floor 1 is the gym).
+  for (const floor of [2, 3, 4]) {
     for (let n = 1; n <= 5; n++) {
       const name = `Phòng ${floor}0${n}`;
       const existing = await db.unit.findFirst({ where: { name } });

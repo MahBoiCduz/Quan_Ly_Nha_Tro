@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import type { LineItem } from "@/lib/billing";
 import { billStatusFor } from "@/lib/billing";
+import { BackLink } from "@/components/back-link";
 import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
 import { FileDown } from "lucide-react";
@@ -27,6 +27,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-6">
+      <BackLink href="/hoa-don" label="Danh sách hóa đơn" />
       <div className="flex items-center justify-between">
         <h1>{bill.lease.unit.name} — {bill.periodLabel}</h1>
         <a
@@ -99,8 +100,6 @@ export default async function BillDetailPage({ params }: { params: { id: string 
         </ul>
         <PaymentPanel billId={bill.id} action={recordPayment} />
       </section>
-
-      <Link href="/hoa-don" className="text-sm underline">← Về danh sách hóa đơn</Link>
     </div>
   );
 }

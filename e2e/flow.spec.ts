@@ -22,9 +22,9 @@ test("admin can add a tenant, lease a room, bill it, and record a payment", asyn
   await expect(page).toHaveURL("http://localhost:3000/khach-thue");
   await expect(page.getByText("E2E Khách").first()).toBeVisible();
 
-  // Assign a lease on Phòng 101
+  // Assign a lease on Phòng 201
   await page.goto("/phong");
-  await page.getByText("Phòng 101").click();
+  await page.getByText("Phòng 201").click();
   await page.locator('select[name="tenantId"]').selectOption({ label: "E2E Khách" });
   await page.locator('input[name="startDate"]').fill("2026-06-01");
   await page.locator('input[name="agreedRent"]').fill("4800000");
@@ -38,7 +38,7 @@ test("admin can add a tenant, lease a room, bill it, and record a payment", asyn
 
   // Generate a bill — /hoa-don/new only lists occupied rooms
   await page.goto("/hoa-don/new");
-  await page.locator('select[name="unitId"]').selectOption({ label: "Phòng 101" });
+  await page.locator('select[name="unitId"]').selectOption({ label: "Phòng 201" });
   await page.getByPlaceholder("Kì thanh toán (vd: Tháng 6/2026)").fill("Tháng 6/2026");
   await page.locator('input[name="dueDate"]').fill("2026-06-05");
   await page.getByRole("button", { name: "Tạo hóa đơn" }).click();
@@ -53,5 +53,5 @@ test("admin can add a tenant, lease a room, bill it, and record a payment", asyn
 
   // It appears in the ledger
   await page.goto("/so-sach");
-  await expect(page.getByText("Phòng 101 - Tháng 6/2026")).toBeVisible();
+  await expect(page.getByText("Phòng 201 - Tháng 6/2026")).toBeVisible();
 });
