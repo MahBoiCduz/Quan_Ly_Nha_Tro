@@ -14,18 +14,11 @@ async function login(page) {
 test("admin can add a tenant, lease a room, bill it, and record a payment", async ({ page }) => {
   await login(page);
 
-  // Create a tenant — redirects to /khach-thue list after save
-  await page.goto("/khach-thue/new");
-  await page.getByPlaceholder("Họ tên").fill("E2E Khách");
-  await page.getByPlaceholder("Số điện thoại").fill("0900000000");
-  await page.getByRole("button", { name: "Lưu" }).click();
-  await expect(page).toHaveURL("http://localhost:3000/khach-thue");
-  await expect(page.getByText("E2E Khách").first()).toBeVisible();
-
-  // Assign a lease on Phòng 201
+  // Create tenant + lease together on Phòng 201 (one combined form on the room page)
   await page.goto("/phong");
   await page.getByText("Phòng 201").click();
-  await page.locator('select[name="tenantId"]').selectOption({ label: "E2E Khách" });
+  await page.getByPlaceholder("Họ tên").fill("E2E Khách");
+  await page.getByPlaceholder("Số điện thoại").fill("0900000000");
   await page.locator('input[name="startDate"]').fill("2026-06-01");
   await page.locator('input[name="agreedRent"]').fill("4800000");
   await page.locator('input[name="depositAmount"]').fill("4800000");

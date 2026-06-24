@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { formatDate } from "@/lib/format";
 import { dueStatus } from "@/lib/maintenance";
 import { ScheduleForm } from "./schedule-form";
 import { deleteSchedule } from "./maintenance-actions";
@@ -39,7 +40,7 @@ export default async function MaintenancePage() {
                   <td className="px-4 py-3 text-ink">{s.name}</td>
                   <td className="px-4 py-3 text-center text-muted">{s.scope === "unit" ? s.unit?.name : "Toàn nhà"}</td>
                   <td className="px-4 py-3 text-center text-muted">{s.intervalDays} ngày</td>
-                  <td className="px-4 py-3 text-center text-muted">{s.nextDueAt.toLocaleDateString("vi-VN")}</td>
+                  <td className="px-4 py-3 text-center text-muted">{formatDate(s.nextDueAt)}</td>
                   <td className="px-4 py-3 text-center">
                     <span className={STATUS_BADGE[st]}>{STATUS_LABEL[st]}</span>
                   </td>

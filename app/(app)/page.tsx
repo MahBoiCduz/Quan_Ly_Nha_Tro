@@ -57,7 +57,7 @@ export default async function DashboardPage() {
           <Receipt size={18} />
           Tạo hóa đơn
         </Link>
-        <Link href="/khach-thue/new" className="btn-primary">
+        <Link href="/phong" className="btn-primary">
           <UserPlus size={18} />
           Thêm khách thuê
         </Link>

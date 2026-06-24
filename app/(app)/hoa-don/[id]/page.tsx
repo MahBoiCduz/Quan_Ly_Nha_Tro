@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { formatVND } from "@/lib/format";
+import { formatVND, formatDate } from "@/lib/format";
 import type { LineItem } from "@/lib/billing";
 import { billStatusFor } from "@/lib/billing";
 import { BackLink } from "@/components/back-link";
@@ -89,7 +89,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
         <ul className="card mb-3 overflow-hidden text-sm">
           {bill.payments.map((p) => (
             <li key={p.id} className="flex justify-between border-b border-line px-4 py-3 last:border-0 hover:bg-cream">
-              <span className="text-ink">{p.paidAt.toLocaleDateString("vi-VN")} · {p.method === "cash" ? "Tiền mặt" : "Chuyển khoản"}</span>
+              <span className="text-ink">{formatDate(p.paidAt)} · {p.method === "cash" ? "Tiền mặt" : "Chuyển khoản"}</span>
               <span className="flex items-center gap-2">
                 <span className="text-ink">{formatVND(p.amount)}</span>
                 {p.receiptImageUrl && <a href={p.receiptImageUrl} target="_blank" className="text-sm underline">biên lai</a>}

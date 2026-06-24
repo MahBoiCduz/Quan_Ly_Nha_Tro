@@ -2,11 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { leaseSchema } from "@/lib/lease-schema";
+import { leaseDetailsSchema } from "@/lib/lease-schema";
+import { tenantSchema } from "@/lib/tenant-schema";
 
-export async function createLease(unitId: string, formData: FormData) {
-  const parsed = leaseSchema.safeParse({
-    tenantId: formData.get("tenantId"),
+export async function startLease(unitId: string, formData: FormData) {
+  const tenantParsed = tenantSchema.safeParse({
+    fullName: formData.get("fullName"),
+    phone: formData.get("phone"),
+    idCardNumber: formData.get("idCardNumber"),
+    idCardFrontImageUrl: formData.get("idCardFrontImageUrl"),
+    idCardBackImageUrl: formData.get("idCardBackImageUrl"),
+    vehiclePlate: formData.get("vehiclePlate"),
+    zaloId: formData.get("zaloId"),
+    notes: formData.get("notes"),
+  });
+  const leaseParsed = leaseDetailsSchema.safeParse({
     startDate: formData.get("startDate"),
     endDate: formData.get("endDate"),
     agreedRent: Number(formData.get("agreedRent") ?? 0),
@@ -15,14 +25,17 @@ export async function createLease(unitId: string, formData: FormData) {
     depositCollectedAt: formData.get("depositCollectedAt"),
     depositCollectedBy: formData.get("depositCollectedBy"),
   });
-  if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
-  const d = parsed.data;
+  if (!tenantParsed.success || !leaseParsed.success) return { error: "Dữ liệu không hợp lệ" };
+  const t = tenantParsed.data;
+  const d = leaseParsed.data;
 
-  await db.$transaction([
-    db.lease.create({
+  // Interactive transaction: the lease needs the id of the tenant we create here.
+  await db.$transaction(async (tx) => {
+    const tenant = await tx.tenant.create({ data: t });
+    await tx.lease.create({
       data: {
         unitId,
-        tenantId: d.tenantId,
+        tenantId: tenant.id,
         startDate: new Date(d.startDate),
         endDate: d.endDate ? new Date(d.endDate) : null,
         agreedRent: d.agreedRent,
@@ -31,9 +44,9 @@ export async function createLease(unitId: string, formData: FormData) {
         depositCollectedAt: d.depositCollectedAt ? new Date(d.depositCollectedAt) : null,
         depositCollectedBy: d.depositCollectedBy ?? null,
       },
-    }),
-    db.unit.update({ where: { id: unitId }, data: { status: "occupied" } }),
-  ]);
+    });
+    await tx.unit.update({ where: { id: unitId }, data: { status: "occupied" } });
+  });
 
   revalidatePath(`/phong/${unitId}`);
   return { ok: true };

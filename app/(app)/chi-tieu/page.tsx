@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { formatVND } from "@/lib/format";
+import { formatVND, formatDate } from "@/lib/format";
 import { ExpenseForm } from "./expense-form";
 import { deleteExpense } from "./expense-actions";
 import { ActionButton } from "@/components/action-button";
@@ -25,7 +25,7 @@ export default async function ExpensesPage() {
           <tbody>
             {expenses.map((e) => (
               <tr key={e.id} className="border-b border-line last:border-0">
-                <td className="px-4 py-3 text-ink">{e.date.toLocaleDateString("vi-VN")}</td>
+                <td className="px-4 py-3 text-ink">{formatDate(e.date)}</td>
                 <td className="px-4 py-3 text-ink">{e.description}</td>
                 <td className="px-4 py-3 text-center text-muted">{e.category}</td>
                 <td className="px-4 py-3 text-right font-medium text-ink">{formatVND(e.amount)}</td>

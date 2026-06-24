@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   DoorOpen,
-  Users,
   Receipt,
   BookText,
   Wallet,
@@ -17,7 +16,6 @@ import {
 export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/phong", label: "Phòng", icon: DoorOpen },
-  { href: "/khach-thue", label: "Khách thuê", icon: Users },
   { href: "/hoa-don", label: "Hóa đơn", icon: Receipt },
   { href: "/so-sach", label: "Sổ sách", icon: BookText },
   { href: "/chi-tieu", label: "Chi tiêu", icon: Wallet },

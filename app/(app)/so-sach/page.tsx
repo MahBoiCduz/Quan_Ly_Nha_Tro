@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { formatVND } from "@/lib/format";
+import { formatVND, formatDate } from "@/lib/format";
 import { buildLedger, monthlySummary } from "@/lib/ledger";
 import { loadLedgerInputs } from "@/lib/ledger-source";
 import { FileDown } from "lucide-react";
@@ -37,7 +37,7 @@ export default async function LedgerPage() {
             {rows.map((r, i) => (
               <tr key={i} className="border-t border-line">
                 <td className="px-4 py-3 text-center text-muted">{i + 1}</td>
-                <td className="px-4 py-3">{r.date.toLocaleDateString("vi-VN")}</td>
+                <td className="px-4 py-3">{formatDate(r.date)}</td>
                 <td className="px-4 py-3">{r.description}</td>
                 <td className="px-4 py-3 text-right">
                   {r.incomeRoom ? formatVND(r.incomeRoom) : ""}

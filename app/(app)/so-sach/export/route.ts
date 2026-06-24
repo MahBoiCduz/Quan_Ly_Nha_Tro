@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import { buildLedger } from "@/lib/ledger";
 import { loadLedgerInputs } from "@/lib/ledger-source";
+import { formatDate } from "@/lib/format";
 
 export async function GET() {
   const { payments, expenses } = await loadLedgerInputs(db);
@@ -10,7 +11,7 @@ export async function GET() {
 
   const data = rows.map((r, i) => ({
     TT: i + 1,
-    Ngày: r.date.toLocaleDateString("vi-VN"),
+    Ngày: formatDate(r.date),
     "Nội dung": r.description,
     "Thu tiền phòng và DV": r.incomeRoom || "",
     "Thu tiền điện nước": r.incomeUtilities || "",
