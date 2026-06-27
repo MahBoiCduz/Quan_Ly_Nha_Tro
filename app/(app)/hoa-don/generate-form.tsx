@@ -5,7 +5,7 @@ import { generateBill } from "./bill-actions";
 
 type Unit = { id: string; name: string };
 
-export function GenerateForm({ units }: { units: Unit[] }) {
+export function GenerateForm({ units, defaultUnitId }: { units: Unit[]; defaultUnitId?: string }) {
   const toast = useToast();
 
   async function onSubmit(formData: FormData) {
@@ -19,7 +19,11 @@ export function GenerateForm({ units }: { units: Unit[] }) {
         <label className="label">Phòng</label>
         <select name="unitId" required className="input">
           <option value="">— Chọn phòng —</option>
-          {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          {units.map((u) => (
+            <option key={u.id} value={u.id} selected={u.id === defaultUnitId}>
+              {u.name}
+            </option>
+          ))}
         </select>
       </div>
       <div>

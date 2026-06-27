@@ -21,3 +21,9 @@ export const leaseSchema = z.object({
 });
 
 export type LeaseInput = z.infer<typeof leaseSchema>;
+
+// Lease fields without tenantId — used when the tenant is created in the same
+// request (combined "new tenant + lease" form on the room page).
+export const leaseDetailsSchema = leaseSchema.omit({ tenantId: true });
+
+export type LeaseDetailsInput = z.infer<typeof leaseDetailsSchema>;

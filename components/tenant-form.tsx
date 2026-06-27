@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useToast } from "@/components/toast";
+import { IdCardUploader } from "@/components/id-card-uploader";
 
 type Tenant = {
   id?: string;
@@ -10,17 +11,14 @@ type Tenant = {
   vehiclePlate?: string | null; zaloId?: string | null; notes?: string | null;
 };
 
-async function uploadImage(file: File): Promise<string> {
-  const fd = new FormData();
-  fd.append("file", file);
-  const res = await fetch("/api/upload", { method: "POST", body: fd });
-  if (!res.ok) throw new Error("upload failed");
-  return (await res.json()).url as string;
-}
-
 export function TenantForm({
-  tenant, action,
-}: { tenant?: Tenant; action: (fd: FormData) => Promise<{ error?: string } | void> }) {
+  tenant, action, onSuccess, submitLabel = "Lưu",
+}: {
+  tenant?: Tenant;
+  action: (fd: FormData) => Promise<{ error?: string } | void>;
+  onSuccess?: () => void;
+  submitLabel?: string;
+}) {
   const [front, setFront] = useState(tenant?.idCardFrontImageUrl ?? "");
   const [back, setBack] = useState(tenant?.idCardBackImageUrl ?? "");
   const toast = useToast();
@@ -30,6 +28,7 @@ export function TenantForm({
     formData.set("idCardBackImageUrl", back);
     const res = await action(formData);
     if (res?.error) toast.error(res.error);
+    else onSuccess?.();
   }
 
   return (
@@ -59,46 +58,9 @@ export function TenantForm({
         <textarea name="notes" defaultValue={tenant?.notes ?? ""} placeholder="Ghi chú" className="input" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="label">
-            Ảnh CCCD mặt trước
-          </label>
-          <input type="file" accept="image/*" className="mt-1 block text-sm text-muted"
-            onChange={async (e) => {
-              if (e.target.files?.[0]) {
-                try {
-                  const url = await uploadImage(e.target.files[0]);
-                  setFront(url);
-                  toast.success("Đã tải ảnh lên");
-                } catch {
-                  toast.error("Tải ảnh thất bại");
-                }
-              }
-            }} />
-          {front && <img src={front} alt="mặt trước" className="mt-1 h-24 rounded border object-cover" />}
-        </div>
-        <div>
-          <label className="label">
-            Ảnh CCCD mặt sau
-          </label>
-          <input type="file" accept="image/*" className="mt-1 block text-sm text-muted"
-            onChange={async (e) => {
-              if (e.target.files?.[0]) {
-                try {
-                  const url = await uploadImage(e.target.files[0]);
-                  setBack(url);
-                  toast.success("Đã tải ảnh lên");
-                } catch {
-                  toast.error("Tải ảnh thất bại");
-                }
-              }
-            }} />
-          {back && <img src={back} alt="mặt sau" className="mt-1 h-24 rounded border object-cover" />}
-        </div>
-      </div>
+      <IdCardUploader front={front} back={back} onFront={setFront} onBack={setBack} />
 
-      <button className="btn-primary">Lưu</button>
+      <button className="btn-primary">{submitLabel}</button>
     </form>
   );
 }
