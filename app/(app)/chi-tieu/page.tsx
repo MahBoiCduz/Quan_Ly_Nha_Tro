@@ -11,8 +11,8 @@ export default async function ExpensesPage() {
     <div>
       <h1 className="mb-6 text-2xl font-bold text-ink">Chi tiêu</h1>
       <ExpenseForm />
-      <div className="card overflow-hidden">
-        <table className="w-full text-[15px]">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[520px] text-[15px]">
           <thead>
             <tr className="bg-cream text-muted text-sm">
               <th className="px-4 py-3 text-left font-medium">Ngày</th>

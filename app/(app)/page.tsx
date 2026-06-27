@@ -17,7 +17,7 @@ function StatCard({
   return (
     <div className="rounded-2xl border border-line bg-surface p-5">
       <div className="text-sm text-muted">{label}</div>
-      <div className={`mt-1 text-3xl font-semibold text-ink ${accent ?? ""}`}>{value}</div>
+      <div className={`mt-1 text-2xl font-semibold text-ink sm:text-3xl ${accent ?? ""}`}>{value}</div>
     </div>
   );
 }
