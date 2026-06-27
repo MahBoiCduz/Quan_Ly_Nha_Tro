@@ -1,9 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import path from "path";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { hashPassword } from "../lib/auth-password";
 
-const adapter = new PrismaBetterSqlite3({ url: path.resolve(process.cwd(), "dev.db") });
+// Same libSQL adapter as lib/db.ts: seeds a local file DB or a remote Turso DB
+// depending on DATABASE_URL / DATABASE_AUTH_TOKEN.
+const adapter = new PrismaLibSql({
+  url: process.env.DATABASE_URL ?? "file:./dev.db",
+  authToken: process.env.DATABASE_AUTH_TOKEN,
+});
 const db = new PrismaClient({ adapter });
 
 async function main() {
