@@ -28,12 +28,12 @@ export default async function BillDetailPage({ params }: { params: { id: string 
   return (
     <div className="space-y-6">
       <BackLink href="/hoa-don" label="Danh sách hóa đơn" />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>{bill.lease.unit.name} — {bill.periodLabel}</h1>
         <a
           href={`/hoa-don/${bill.id}/pdf`}
           target="_blank"
-          className="btn-secondary"
+          className="btn-secondary shrink-0 self-start"
         >
           <FileDown size={18} /> Xuất PDF
         </a>
@@ -43,8 +43,8 @@ export default async function BillDetailPage({ params }: { params: { id: string 
         Trạng thái: <span className={badgeClass}>{STATUS_LABEL[display]}</span>
       </p>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
           <thead>
             <tr className="bg-cream text-muted">
               <th className="border-b border-line px-3 py-2 text-left text-sm">Dịch vụ</th>

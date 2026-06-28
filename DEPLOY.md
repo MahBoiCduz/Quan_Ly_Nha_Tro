@@ -21,17 +21,21 @@ git push -u origin master
 
 ## 2. Tạo database Turso
 
+> Turso CLI **không có bản Windows**. Trên Windows, tạo DB qua web dashboard
+> rồi nạp schema bằng script Node (không cần CLI). macOS/Linux có thể dùng
+> `turso` CLI như bình thường.
+
+1. Vào **https://app.turso.tech** → đăng nhập → **Create Database**
+   (name `nhatro`, region gần VN nhất, vd Singapore/Tokyo).
+2. Lấy **Database URL** (`libsql://...`) và tạo **Auth Token** (Read & Write).
+3. Nạp schema + seed admin (chạy 1 lần, từ máy bạn):
+
 ```bash
-# Cài CLI (Windows: dùng scoop, hoặc xem https://docs.turso.tech)
-turso auth signup
-turso db create nhatro
-
-# Nạp schema sẵn có vào Turso (chạy 1 lần)
-turso db shell nhatro < prisma/migrations/20260618161817_init/migration.sql
-
-# Lấy thông tin kết nối — giữ 2 giá trị này
-turso db show nhatro --url        # -> libsql://nhatro-xxx.turso.io
-turso db tokens create nhatro     # -> token dài
+# PowerShell
+$env:DATABASE_URL="libsql://nhatro-xxx.turso.io"
+$env:DATABASE_AUTH_TOKEN="<token>"
+node scripts/push-turso-schema.mjs   # áp toàn bộ prisma/migrations/*
+npm run db:seed                      # tạo admin + 16 phòng
 ```
 
 ## 3. Import project vào Vercel
@@ -53,19 +57,12 @@ turso db tokens create nhatro     # -> token dài
 
 `BLOB_READ_WRITE_TOKEN` đã được thêm tự động ở bước 3.
 
-## 5. Deploy + seed tài khoản admin
+## 5. Deploy
 
-- Bấm **Deploy**. Xong là có URL `https://...vercel.app`.
-- Tạo admin trên DB Turso (chạy 1 lần, từ máy bạn — trỏ env sang Turso):
+Bấm **Deploy**. Xong là có URL `https://...vercel.app`.
 
-```bash
-# PowerShell
-$env:DATABASE_URL="libsql://nhatro-xxx.turso.io"
-$env:DATABASE_AUTH_TOKEN="<token>"
-npm run db:seed
-```
-
-Đăng nhập: `admin@nhatro.local` / `doimatkhau` → **đổi mật khẩu ngay**.
+Đăng nhập bằng admin đã seed ở bước 2: `admin@nhatro.local` / `doimatkhau`
+→ **đổi mật khẩu ngay**.
 
 ## 6. Cron Zalo
 

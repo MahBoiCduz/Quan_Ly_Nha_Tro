@@ -32,12 +32,12 @@ export default async function BillsPage() {
             <li key={b.id} className="border-b border-line last:border-0">
               <Link
                 href={`/hoa-don/${b.id}`}
-                className="flex items-center justify-between px-4 py-3 text-[15px] hover:bg-cream"
+                className="flex flex-col gap-1.5 px-4 py-3 text-[15px] hover:bg-cream sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
-                <span className="text-ink">
+                <span className="min-w-0 text-ink">
                   {b.lease.unit.name} · {b.periodLabel} · {b.lease.tenant.fullName}
                 </span>
-                <span className="flex items-center gap-3">
+                <span className="flex shrink-0 items-center gap-3">
                   <span className="text-ink">{formatVND(b.grandTotal)}</span>
                   <span className={badgeClass}>
                     {display === "overdue" ? "Quá hạn" : display === "paid" ? "Đã thu" : "Chưa thu"}

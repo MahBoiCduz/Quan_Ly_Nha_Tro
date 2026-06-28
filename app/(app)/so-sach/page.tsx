@@ -19,8 +19,8 @@ export default async function LedgerPage() {
         </a>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full min-w-[760px] text-sm">
           <thead>
             <tr className="bg-cream text-muted">
               <th className="px-4 py-3 text-center">TT</th>
@@ -67,8 +67,8 @@ export default async function LedgerPage() {
 
       <div>
         <h2 className="mb-3">Tổng kết theo tháng</h2>
-        <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="card overflow-x-auto">
+          <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="bg-cream text-muted">
                 <th className="px-4 py-3 text-left">Tháng</th>

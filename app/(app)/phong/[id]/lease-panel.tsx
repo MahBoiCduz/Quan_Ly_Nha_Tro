@@ -25,7 +25,7 @@ export function LeasePanel({
 
   return (
     <div className="card p-4 space-y-3">
-      <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <div>
           <span className="text-muted">Ngày bắt đầu:</span>{" "}
           <span className="text-ink">{formatDate(activeLease.startDate)}</span>
