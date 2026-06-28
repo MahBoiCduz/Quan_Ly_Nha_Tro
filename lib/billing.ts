@@ -39,6 +39,11 @@ export function computeGrandTotal(subtotal: number, electricity: number, water: 
   return subtotal + electricity + water;
 }
 
+/** Money for a metered utility: (newReading − oldReading) × unit price, never negative. */
+export function computeMeterAmount(oldReading: number, newReading: number, rate: number): number {
+  return Math.max(0, Math.round((newReading - oldReading) * rate));
+}
+
 export function billStatusFor(
   grandTotal: number,
   totalPaid: number,

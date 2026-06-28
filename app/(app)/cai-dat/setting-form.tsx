@@ -11,6 +11,8 @@ type Setting = {
   qrImageUrl?: string | null;
   invoiceNotes?: string | null;
   adminZaloUserId?: string | null;
+  defaultElectricityRate?: number | null;
+  defaultWaterRate?: number | null;
 };
 
 async function uploadImage(file: File): Promise<string> {
@@ -52,6 +54,16 @@ export function SettingForm({ setting }: { setting: Setting | null }) {
       <div>
         <label className="label">Ghi chú trên hóa đơn</label>
         <textarea name="invoiceNotes" defaultValue={setting?.invoiceNotes ?? ""} placeholder="Ghi chú trên hóa đơn" className="input" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="label">Đơn giá điện (đ/kWh)</label>
+          <input name="defaultElectricityRate" type="number" min="0" defaultValue={setting?.defaultElectricityRate ?? 4000} placeholder="4000" className="input" />
+        </div>
+        <div>
+          <label className="label">Đơn giá nước (đ/m³)</label>
+          <input name="defaultWaterRate" type="number" min="0" defaultValue={setting?.defaultWaterRate ?? 35000} placeholder="35000" className="input" />
+        </div>
       </div>
       <div>
         <label className="label">Zalo user id của admin</label>

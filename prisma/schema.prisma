@@ -81,6 +81,14 @@ model Bill {
   lineItems         Json
   electricityAmount Int        @default(0)
   waterAmount       Int        @default(0)
+  // Meter readings the amounts were derived from (nullable: legacy/manual bills
+  // may store only the amount). Electricity is whole kWh, water is m³ (decimals).
+  electricityOld    Int?
+  electricityNew    Int?
+  electricityRate   Int?
+  waterOld          Float?
+  waterNew          Float?
+  waterRate         Int?
   subtotal          Int        @default(0)
   grandTotal        Int        @default(0)
   payments          Payment[]
@@ -142,13 +150,15 @@ model User {
 }
 
 model Setting {
-  id              String  @id @default("singleton")
-  bankAccountName String?
-  bankAccountNo   String?
-  bankName        String?
-  qrImageUrl      String?
-  invoiceNotes    String?
-  adminZaloUserId String?
+  id                     String  @id @default("singleton")
+  bankAccountName        String?
+  bankAccountNo          String?
+  bankName               String?
+  qrImageUrl             String?
+  invoiceNotes           String?
+  adminZaloUserId        String?
+  defaultElectricityRate Int?
+  defaultWaterRate       Int?
 }
 
 model NotificationLog {

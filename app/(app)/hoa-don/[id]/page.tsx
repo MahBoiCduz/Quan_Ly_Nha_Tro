@@ -6,6 +6,7 @@ import { billStatusFor } from "@/lib/billing";
 import { BackLink } from "@/components/back-link";
 import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
+import { DeleteBillButton } from "./delete-bill-button";
 import { FileDown } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã thu", overdue: "Quá hạn" };
@@ -30,13 +31,16 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       <BackLink href="/hoa-don" label="Danh sách hóa đơn" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>{bill.lease.unit.name} — {bill.periodLabel}</h1>
-        <a
-          href={`/hoa-don/${bill.id}/pdf`}
-          target="_blank"
-          className="btn-secondary shrink-0 self-start"
-        >
-          <FileDown size={18} /> Xuất PDF
-        </a>
+        <div className="flex shrink-0 gap-2 self-start">
+          <a
+            href={`/hoa-don/${bill.id}/pdf`}
+            target="_blank"
+            className="btn-secondary"
+          >
+            <FileDown size={18} /> Xuất PDF
+          </a>
+          <DeleteBillButton billId={bill.id} />
+        </div>
       </div>
       <p className="text-sm text-muted">
         Khách: {bill.lease.tenant.fullName} · {bill.lease.tenant.phone} ·
@@ -69,11 +73,27 @@ export default async function BillDetailPage({ params }: { params: { id: string 
               <td className="px-3 py-2 text-right text-ink">{formatVND(bill.subtotal)}</td>
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-2 text-ink" colSpan={4}>Tiền điện</td>
+              <td className="px-3 py-2 text-ink" colSpan={4}>
+                Tiền điện
+                {bill.electricityNew != null && bill.electricityOld != null && (
+                  <span className="text-muted">
+                    {" "}({bill.electricityNew} − {bill.electricityOld} = {bill.electricityNew - bill.electricityOld} kWh
+                    × {formatVND(bill.electricityRate ?? 0)})
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2 text-right text-ink">{formatVND(bill.electricityAmount)}</td>
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-2 text-ink" colSpan={4}>Tiền nước</td>
+              <td className="px-3 py-2 text-ink" colSpan={4}>
+                Tiền nước
+                {bill.waterNew != null && bill.waterOld != null && (
+                  <span className="text-muted">
+                    {" "}({bill.waterNew} − {bill.waterOld} = {Math.round((bill.waterNew - bill.waterOld) * 100) / 100} m³
+                    × {formatVND(bill.waterRate ?? 0)})
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2 text-right text-ink">{formatVND(bill.waterAmount)}</td>
             </tr>
             <tr className="font-bold">
