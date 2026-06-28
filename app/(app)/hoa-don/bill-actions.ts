@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getActiveLease } from "@/lib/rooms";
-import { buildDefaultLineItems, computeSubtotal, computeGrandTotal } from "@/lib/billing";
+import { buildDefaultLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
 import { billGenerateSchema } from "@/lib/bill-schema";
 
 export async function generateBill(formData: FormData) {
@@ -12,8 +12,12 @@ export async function generateBill(formData: FormData) {
     unitId: formData.get("unitId"),
     periodLabel: formData.get("periodLabel"),
     dueDate: formData.get("dueDate"),
-    electricityAmount: Number(formData.get("electricityAmount") ?? 0),
-    waterAmount: Number(formData.get("waterAmount") ?? 0),
+    electricityOld: Number(formData.get("electricityOld") ?? 0),
+    electricityNew: Number(formData.get("electricityNew") ?? 0),
+    electricityRate: Number(formData.get("electricityRate") ?? 0),
+    waterOld: Number(formData.get("waterOld") ?? 0),
+    waterNew: Number(formData.get("waterNew") ?? 0),
+    waterRate: Number(formData.get("waterRate") ?? 0),
   });
   if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
   const d = parsed.data;
@@ -29,7 +33,9 @@ export async function generateBill(formData: FormData) {
 
   const lineItems = buildDefaultLineItems(unit.serviceItems, lease.agreedRent);
   const subtotal = computeSubtotal(lineItems);
-  const grandTotal = computeGrandTotal(subtotal, d.electricityAmount, d.waterAmount);
+  const electricityAmount = computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
+  const waterAmount = computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
+  const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
 
   const bill = await db.bill.create({
     data: {
@@ -37,8 +43,14 @@ export async function generateBill(formData: FormData) {
       periodLabel: d.periodLabel,
       dueDate: new Date(d.dueDate),
       lineItems,
-      electricityAmount: d.electricityAmount,
-      waterAmount: d.waterAmount,
+      electricityAmount,
+      waterAmount,
+      electricityOld: d.electricityOld,
+      electricityNew: d.electricityNew,
+      electricityRate: d.electricityRate,
+      waterOld: d.waterOld,
+      waterNew: d.waterNew,
+      waterRate: d.waterRate,
       subtotal,
       grandTotal,
       status: "unpaid",
@@ -47,4 +59,21 @@ export async function generateBill(formData: FormData) {
 
   revalidatePath("/hoa-don");
   redirect(`/hoa-don/${bill.id}`);
+}
+
+export async function deleteBill(id: string) {
+  const bill = await db.bill.findUnique({
+    where: { id },
+    include: { lease: { select: { unitId: true } } },
+  });
+  if (!bill) return { error: "Không tìm thấy hóa đơn" };
+  // Delete the bill's payments first (no cascade on the relation), then the bill.
+  await db.$transaction([
+    db.payment.deleteMany({ where: { billId: id } }),
+    db.bill.delete({ where: { id } }),
+  ]);
+  revalidatePath("/hoa-don");
+  revalidatePath("/so-sach");
+  revalidatePath(`/phong/${bill.lease.unitId}`);
+  return { ok: true };
 }

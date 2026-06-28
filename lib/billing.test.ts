@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  lineTotal, buildDefaultLineItems, computeSubtotal, computeGrandTotal, billStatusFor,
+  lineTotal, buildDefaultLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount, billStatusFor,
 } from "@/lib/billing";
 
 describe("lineTotal", () => {
@@ -33,6 +33,18 @@ describe("computeSubtotal", () => {
 describe("computeGrandTotal", () => {
   it("adds electricity and water to the subtotal", () => {
     expect(computeGrandTotal(5100000, 559000, 250000)).toBe(5909000);
+  });
+});
+
+describe("computeMeterAmount", () => {
+  it("multiplies the usage delta by the rate", () => {
+    expect(computeMeterAmount(1502, 1607, 4000)).toBe(420000);
+  });
+  it("rounds decimal water usage", () => {
+    expect(computeMeterAmount(56, 58.9, 35000)).toBe(101500);
+  });
+  it("never goes negative on a meter reset", () => {
+    expect(computeMeterAmount(1588, 0, 4000)).toBe(0);
   });
 });
 

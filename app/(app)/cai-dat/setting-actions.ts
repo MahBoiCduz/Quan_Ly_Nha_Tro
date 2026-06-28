@@ -15,6 +15,8 @@ export async function saveSettings(formData: FormData) {
     qrImageUrl: formData.get("qrImageUrl"),
     invoiceNotes: formData.get("invoiceNotes"),
     adminZaloUserId: formData.get("adminZaloUserId"),
+    defaultElectricityRate: formData.get("defaultElectricityRate"),
+    defaultWaterRate: formData.get("defaultWaterRate"),
   });
   if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
   const d = parsed.data;
