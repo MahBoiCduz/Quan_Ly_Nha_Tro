@@ -32,6 +32,22 @@ export async function saveSettings(formData: FormData) {
 
 export async function qrDataUrl(qrImageUrl: string | null): Promise<string | null> {
   if (!qrImageUrl) return null;
+
+  // Remote upload (Vercel Blob on prod) — fetch it and inline as a data URL.
+  // The serverless filesystem has no copy of the file, so readFile would fail.
+  if (/^https?:\/\//i.test(qrImageUrl)) {
+    try {
+      const res = await fetch(qrImageUrl);
+      if (!res.ok) return null;
+      const data = Buffer.from(await res.arrayBuffer());
+      const mime = res.headers.get("content-type") || "image/png";
+      return `data:${mime};base64,${data.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  }
+
+  // Local filesystem upload (dev fallback served at /api/files/...).
   const name = sanitizeFilename(qrImageUrl.replace(/^\/api\/files\//, ""));
   try {
     const data = await readFile(path.join(uploadDir(), name));
