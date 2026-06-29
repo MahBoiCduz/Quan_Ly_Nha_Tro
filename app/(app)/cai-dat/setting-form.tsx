@@ -28,7 +28,8 @@ export function SettingForm({ setting }: { setting: Setting | null }) {
   const toast = useToast();
 
   async function onSubmit(formData: FormData) {
-    formData.set("qrImageUrl", qr);
+    // qrImageUrl rides along as a native hidden input (below) so it lands in the
+    // FormData the same reliable way the other fields do.
     const res = await saveSettings(formData);
     if (res?.error) {
       toast.error(res.error);
@@ -39,6 +40,7 @@ export function SettingForm({ setting }: { setting: Setting | null }) {
 
   return (
     <form action={onSubmit} className="max-w-lg space-y-4">
+      <input type="hidden" name="qrImageUrl" value={qr} />
       <div>
         <label className="label">Tên tài khoản</label>
         <input name="bankAccountName" defaultValue={setting?.bankAccountName ?? ""} placeholder="Tên tài khoản" className="input" />
