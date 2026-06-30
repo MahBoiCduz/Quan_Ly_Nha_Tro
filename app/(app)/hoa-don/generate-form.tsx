@@ -6,24 +6,29 @@ import { formatVND } from "@/lib/format";
 import { computeMeterAmount } from "@/lib/billing";
 import { generateBill } from "./bill-actions";
 
-type Unit = { id: string; name: string };
+type Unit = { id: string; name: string; billingProfileId: string | null };
+type Profile = { id: string; name: string };
 type Readings = Record<string, { elec: number; water: number }>;
 
 export function GenerateForm({
   units,
+  profiles,
   defaultUnitId,
   lastReadings,
   defaultElectricityRate,
   defaultWaterRate,
 }: {
   units: Unit[];
+  profiles: Profile[];
   defaultUnitId?: string;
   lastReadings: Readings;
   defaultElectricityRate: number;
   defaultWaterRate: number;
 }) {
   const toast = useToast();
+  const profileForUnit = (id?: string) => units.find((u) => u.id === id)?.billingProfileId ?? "";
   const [unitId, setUnitId] = useState(defaultUnitId ?? "");
+  const [profileId, setProfileId] = useState(profileForUnit(defaultUnitId));
   const [elecOld, setElecOld] = useState<string>(String(lastReadings[unitId]?.elec ?? ""));
   const [elecNew, setElecNew] = useState("");
   const [elecRate, setElecRate] = useState(String(defaultElectricityRate));
@@ -35,12 +40,28 @@ export function GenerateForm({
     setUnitId(id);
     setElecOld(lastReadings[id]?.elec != null ? String(lastReadings[id].elec) : "");
     setWaterOld(lastReadings[id]?.water != null ? String(lastReadings[id].water) : "");
+    setProfileId(profileForUnit(id));
   }
 
   const elecAmount = computeMeterAmount(Number(elecOld || 0), Number(elecNew || 0), Number(elecRate || 0));
   const waterAmount = computeMeterAmount(Number(waterOld || 0), Number(waterNew || 0), Number(waterRate || 0));
 
+  // Local "today" as YYYY-MM-DD for the date input's min + the pre-submit check.
+  const today = new Intl.DateTimeFormat("en-CA").format(new Date());
+
   async function onSubmit(formData: FormData) {
+    if (Number(elecNew || 0) < Number(elecOld || 0)) {
+      toast.error("Số điện mới phải lớn hơn hoặc bằng số cũ");
+      return;
+    }
+    if (Number(waterNew || 0) < Number(waterOld || 0)) {
+      toast.error("Số nước mới phải lớn hơn hoặc bằng số cũ");
+      return;
+    }
+    if (String(formData.get("dueDate") ?? "") < today) {
+      toast.error("Hạn thanh toán phải từ hôm nay trở đi");
+      return;
+    }
     const res = await generateBill(formData);
     if (res?.error) toast.error(res.error);
   }
@@ -62,8 +83,25 @@ export function GenerateForm({
       </div>
       <div>
         <label className="label">Hạn thanh toán</label>
-        <input name="dueDate" type="date" required className="input" />
+        <input name="dueDate" type="date" min={today} required className="input" />
       </div>
+      {profiles.length > 0 && (
+        <div>
+          <label className="label">Hồ sơ thu tiền (STK/QR)</label>
+          <select
+            name="billingProfileId"
+            className="input"
+            value={profileId}
+            onChange={(e) => setProfileId(e.target.value)}
+          >
+            <option value="">Mặc định</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-muted">Tự chọn theo phòng, có thể đổi.</p>
+        </div>
+      )}
 
       <fieldset className="card space-y-3 p-4">
         <legend className="px-1 text-sm font-medium text-muted">Điện</legend>

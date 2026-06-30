@@ -26,8 +26,14 @@ export type InvoiceModel = {
   subtotal: number;
   electricityAmount: number;
   waterAmount: number;
-  electricityNote: string;
-  waterNote: string;
+  electricityOld: number | null;
+  electricityNew: number | null;
+  electricityUsage: number | null;
+  electricityRate: number;
+  waterOld: number | null;
+  waterNew: number | null;
+  waterUsage: number | null;
+  waterRate: number;
   grandTotal: number;
   depositAmount: number;
   notes: string;
@@ -44,11 +50,11 @@ type MeterBill = {
   waterOld?: number | null; waterNew?: number | null; waterRate?: number | null;
 };
 
-// "(1607 − 1502 = 105 × 4.000)" when meter readings are present, else "".
-function meterNote(oldR: number | null | undefined, newR: number | null | undefined, rate: number | null | undefined): string {
-  if (oldR == null || newR == null) return "";
-  const usage = Math.round((newR - oldR) * 100) / 100;
-  return ` (${newR} − ${oldR} = ${usage} × ${formatVND(rate ?? 0)})`;
+// Consumption = new − old reading (rounded to 2 decimals for water), or null
+// when the bill has no meter readings (legacy bills).
+function meterUsage(oldR: number | null | undefined, newR: number | null | undefined): number | null {
+  if (oldR == null || newR == null) return null;
+  return Math.round((newR - oldR) * 100) / 100;
 }
 
 export function buildInvoiceModel(
@@ -68,8 +74,14 @@ export function buildInvoiceModel(
     subtotal: bill.subtotal,
     electricityAmount: bill.electricityAmount,
     waterAmount: bill.waterAmount,
-    electricityNote: meterNote(bill.electricityOld, bill.electricityNew, bill.electricityRate),
-    waterNote: meterNote(bill.waterOld, bill.waterNew, bill.waterRate),
+    electricityOld: bill.electricityOld ?? null,
+    electricityNew: bill.electricityNew ?? null,
+    electricityUsage: meterUsage(bill.electricityOld, bill.electricityNew),
+    electricityRate: bill.electricityRate ?? 0,
+    waterOld: bill.waterOld ?? null,
+    waterNew: bill.waterNew ?? null,
+    waterUsage: meterUsage(bill.waterOld, bill.waterNew),
+    waterRate: bill.waterRate ?? 0,
     grandTotal: bill.grandTotal,
     depositAmount: lease.depositAmount,
     notes: setting?.invoiceNotes ?? "",
@@ -98,6 +110,28 @@ const s = StyleSheet.create({
   qr: { width: 120, height: 120, marginTop: 8 },
 });
 
+// A metered service row (điện / nước): số lượng = chênh lệch chỉ số, đơn giá, thành tiền.
+function MeterRow({
+  label, unit, oldR, newR, usage, rate, amount,
+}: {
+  label: string; unit: string;
+  oldR: number | null; newR: number | null; usage: number | null;
+  rate: number; amount: number;
+}) {
+  return (
+    <View style={s.row}>
+      <Text style={[s.cell, s.cTT]}> </Text>
+      <Text style={[s.cell, s.cName]}>
+        {label}{oldR != null ? ` (${oldR} → ${newR})` : ""}
+      </Text>
+      <Text style={[s.cell, s.cUnit]}>{unit}</Text>
+      <Text style={[s.cell, s.cQty]}>{usage ?? " "}</Text>
+      <Text style={[s.cell, s.cPrice]}>{usage != null ? formatVND(rate) : " "}</Text>
+      <Text style={[s.cell, s.cTotal]}>{formatVND(amount)}</Text>
+    </View>
+  );
+}
+
 export function InvoiceDocument({ model }: { model: InvoiceModel }) {
   return (
     <Document>
@@ -105,7 +139,7 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
         <Text style={s.title}>{model.unitName.toUpperCase()}</Text>
         <Text style={s.headerLine}>Kì thanh toán: {model.periodLabel}</Text>
         <Text style={s.headerLine}>
-          Người thuê: {model.tenantName} (ĐT: {model.phone})    Biển số XM: {model.vehiclePlate}
+          Người thuê: {model.tenantName} (ĐT: {model.phone})
         </Text>
 
         <View style={s.table}>
@@ -129,23 +163,24 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
               <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
             </View>
           ))}
-          {/* Subtotal + deposit row */}
+          {/* Subtotal: room + services, excluding electricity & water */}
           <View style={s.row}>
-            <Text style={[s.cell, { width: "66%" }]}>
+            <Text style={[s.cell, { width: "82%" }]}>
               Tổng tiền nhà và DV (trừ điện, nước)
             </Text>
-            <Text style={[s.cell, s.cPrice]}>{formatVND(model.subtotal)}</Text>
-            <Text style={[s.cell, s.cTotal]}>Cọc {formatVND(model.depositAmount)}</Text>
+            <Text style={[s.cell, s.cTotal]}>{formatVND(model.subtotal)}</Text>
           </View>
-          {/* Electricity / water / grand total */}
-          <View style={s.row}>
-            <Text style={[s.cell, { width: "82%" }]}>Tiền điện{model.electricityNote}</Text>
-            <Text style={[s.cell, s.cTotal]}>{formatVND(model.electricityAmount)}</Text>
-          </View>
-          <View style={s.row}>
-            <Text style={[s.cell, { width: "82%" }]}>Tiền nước{model.waterNote}</Text>
-            <Text style={[s.cell, s.cTotal]}>{formatVND(model.waterAmount)}</Text>
-          </View>
+          <MeterRow
+            label="Tiền điện" unit="kWh"
+            oldR={model.electricityOld} newR={model.electricityNew}
+            usage={model.electricityUsage} rate={model.electricityRate} amount={model.electricityAmount}
+          />
+          <MeterRow
+            label="Tiền nước" unit="m³"
+            oldR={model.waterOld} newR={model.waterNew}
+            usage={model.waterUsage} rate={model.waterRate} amount={model.waterAmount}
+          />
+          {/* Grand total */}
           <View style={s.row}>
             <Text style={[s.cell, { width: "82%", fontWeight: "bold" }]}>Tổng cộng</Text>
             <Text style={[s.cell, s.cTotal, { fontWeight: "bold" }]}>{formatVND(model.grandTotal)}</Text>

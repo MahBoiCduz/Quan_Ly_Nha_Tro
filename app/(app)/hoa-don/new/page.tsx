@@ -6,11 +6,14 @@ const DEFAULT_ELECTRICITY_RATE = 4000;
 const DEFAULT_WATER_RATE = 35000;
 
 export default async function NewBillPage({ searchParams }: { searchParams: { unitId?: string } }) {
-  const units = await db.unit.findMany({
-    where: { status: "occupied" },
-    orderBy: [{ floor: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
+  const [units, profiles] = await Promise.all([
+    db.unit.findMany({
+      where: { status: "occupied" },
+      orderBy: [{ floor: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, billingProfileId: true },
+    }),
+    db.billingProfile.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
 
   // Latest meter readings per unit (from the most recent bill that recorded them)
@@ -32,6 +35,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
       <h1 className="mb-4">Tạo hóa đơn</h1>
       <GenerateForm
         units={units}
+        profiles={profiles}
         defaultUnitId={searchParams.unitId}
         lastReadings={lastReadings}
         defaultElectricityRate={setting?.defaultElectricityRate ?? DEFAULT_ELECTRICITY_RATE}

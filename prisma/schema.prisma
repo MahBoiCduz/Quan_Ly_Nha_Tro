@@ -25,8 +25,29 @@ model Unit {
   serviceItems ServiceItem[]
   leases       Lease[]
   maintenance  MaintenanceSchedule[]
+  // Which billing profile (bank account / QR) this room's invoices use.
+  // null = the default profile stored on Setting.
+  billingProfile   BillingProfile? @relation(fields: [billingProfileId], references: [id])
+  billingProfileId String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+// A named set of payment details (owner bank account + QR) so invoices for
+// different rooms can show different recipients. The "default" profile lives on
+// Setting; these are the extra ones (e.g. another co-owner's account).
+model BillingProfile {
+  id              String   @id @default(cuid())
+  name            String
+  bankAccountName String?
+  bankAccountNo   String?
+  bankName        String?
+  qrImageUrl      String?
+  invoiceNotes    String?
+  units           Unit[]
+  bills           Bill[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model ServiceItem {
@@ -91,6 +112,9 @@ model Bill {
   waterRate         Int?
   subtotal          Int        @default(0)
   grandTotal        Int        @default(0)
+  // Billing profile chosen when the bill was created (null = default on Setting).
+  billingProfile    BillingProfile? @relation(fields: [billingProfileId], references: [id])
+  billingProfileId  String?
   payments          Payment[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
