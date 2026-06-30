@@ -62,7 +62,20 @@ npm run db:seed                      # tạo admin + 16 phòng
 Bấm **Deploy**. Xong là có URL `https://...vercel.app`.
 
 Đăng nhập bằng admin đã seed ở bước 2: `admin@nhatro.local` / `doimatkhau`
-→ **đổi mật khẩu ngay**.
+→ **đổi mật khẩu ngay** (xem bên dưới).
+
+### Đổi mật khẩu admin
+
+Hiện chưa có UI đổi mật khẩu — dùng script đặt lại mật khẩu trực tiếp trong DB:
+
+```bash
+# PowerShell (Turso)
+$env:DATABASE_URL="libsql://nhatro-xxx.turso.io"
+$env:DATABASE_AUTH_TOKEN="<token>"
+node scripts/set-admin-password.mjs admin@nhatro.local 'Locvung@666'
+```
+
+Local (file `dev.db`) thì bỏ qua 2 biến trên. Tham số: `<email> <mật khẩu mới>`.
 
 ## 6. Cron Zalo
 
