@@ -9,6 +9,7 @@ import {
   BookText,
   Wallet,
   Wrench,
+  Users,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/so-sach", label: "Sổ sách", icon: BookText },
   { href: "/chi-tieu", label: "Chi tiêu", icon: Wallet },
   { href: "/bao-tri", label: "Bảo trì", icon: Wrench },
+  { href: "/nguoi-dung", label: "Người dùng", icon: Users },
   { href: "/cai-dat", label: "Cài đặt", icon: Settings },
 ];
 
