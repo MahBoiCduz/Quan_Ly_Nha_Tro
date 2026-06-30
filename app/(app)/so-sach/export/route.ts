@@ -5,6 +5,11 @@ import { buildLedger } from "@/lib/ledger";
 import { loadLedgerInputs } from "@/lib/ledger-source";
 import { formatDate } from "@/lib/format";
 
+// Reads the DB per request; a layout's segment config doesn't reach route
+// handlers, so opt this one out of static prerendering explicitly (see the
+// note in app/(app)/layout.tsx).
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const { payments, expenses } = await loadLedgerInputs(db);
   const rows = buildLedger(payments, expenses);
