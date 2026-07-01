@@ -13,22 +13,37 @@ export function lineTotal(quantity: number, unitPrice: number): number {
 export function buildDefaultLineItems(
   services: { name: string; measureUnit: string; defaultPrice: number }[],
   agreedRent: number,
+  months = 1,
 ): LineItem[] {
   const items: LineItem[] = services.map((s) => ({
     name: s.name,
     measureUnit: s.measureUnit,
-    quantity: 1,
+    quantity: months,
     unitPrice: s.defaultPrice,
-    total: lineTotal(1, s.defaultPrice),
+    total: lineTotal(months, s.defaultPrice),
   }));
   items.push({
     name: "Tiền thuê phòng",
     measureUnit: "phòng",
-    quantity: 1,
+    quantity: months,
     unitPrice: agreedRent,
-    total: agreedRent,
+    total: lineTotal(months, agreedRent),
   });
   return items;
+}
+
+// Recompute each line's total from quantity × unitPrice — the server's source of
+// truth for the editable bill table (client-sent totals are never trusted).
+export function normalizeLineItems(
+  items: { name: string; measureUnit?: string; unitPrice: number; quantity: number }[],
+): LineItem[] {
+  return items.map((i) => ({
+    name: i.name,
+    measureUnit: i.measureUnit ?? "",
+    quantity: i.quantity,
+    unitPrice: i.unitPrice,
+    total: lineTotal(i.quantity, i.unitPrice),
+  }));
 }
 
 export function computeSubtotal(items: LineItem[]): number {

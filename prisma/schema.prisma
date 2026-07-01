@@ -69,7 +69,11 @@ model Tenant {
   vehiclePlate        String?
   zaloId              String?
   notes               String?
-  leases              Lease[]
+  // As the lease's representative (the billing/contact tenant).
+  leases              Lease[]  @relation("PrimaryTenant")
+  // As an additional occupant sharing a lease (own info + ID card, not billed).
+  coLease             Lease?   @relation("CoTenants", fields: [coLeaseId], references: [id])
+  coLeaseId           String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }
@@ -78,8 +82,9 @@ model Lease {
   id                String       @id @default(cuid())
   unit              Unit         @relation(fields: [unitId], references: [id])
   unitId            String
-  tenant            Tenant       @relation(fields: [tenantId], references: [id])
+  tenant            Tenant       @relation("PrimaryTenant", fields: [tenantId], references: [id])
   tenantId          String
+  coTenants         Tenant[]     @relation("CoTenants")
   startDate         DateTime
   endDate           DateTime?
   agreedRent        Int

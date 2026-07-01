@@ -3,6 +3,7 @@ import { billGenerateSchema } from "@/lib/bill-schema";
 
 const base = {
   unitId: "u1", periodLabel: "Tháng 6/2026", dueDate: "2030-06-05",
+  lineItems: JSON.stringify([{ name: "Tiền thuê phòng", measureUnit: "phòng", unitPrice: 4800000, quantity: 1 }]),
   electricityOld: 1502, electricityNew: 1607, electricityRate: 4000,
   waterOld: 56, waterNew: 58.9, waterRate: 35000,
 };
@@ -28,5 +29,12 @@ describe("billGenerateSchema", () => {
   });
   it("rejects a due date in the past", () => {
     expect(billGenerateSchema.safeParse({ ...base, dueDate: "2020-01-01" }).success).toBe(false);
+  });
+  it("parses lineItems from a JSON string", () => {
+    const r = billGenerateSchema.safeParse(base);
+    expect(r.success && r.data.lineItems[0]).toMatchObject({ name: "Tiền thuê phòng", unitPrice: 4800000, quantity: 1 });
+  });
+  it("rejects an empty lineItems array", () => {
+    expect(billGenerateSchema.safeParse({ ...base, lineItems: "[]" }).success).toBe(false);
   });
 });

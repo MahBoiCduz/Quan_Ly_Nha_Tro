@@ -1,19 +1,35 @@
 import { db } from "@/lib/db";
 import { BackLink } from "@/components/back-link";
+import { getActiveLease } from "@/lib/rooms";
 import { GenerateForm } from "../generate-form";
 
 const DEFAULT_ELECTRICITY_RATE = 4000;
 const DEFAULT_WATER_RATE = 35000;
 
 export default async function NewBillPage({ searchParams }: { searchParams: { unitId?: string } }) {
-  const [units, profiles] = await Promise.all([
+  const [rawUnits, profiles] = await Promise.all([
     db.unit.findMany({
       where: { status: "occupied" },
       orderBy: [{ floor: "asc" }, { name: "asc" }],
-      select: { id: true, name: true, billingProfileId: true },
+      select: {
+        id: true,
+        name: true,
+        billingProfileId: true,
+        serviceItems: { select: { name: true, measureUnit: true, defaultPrice: true } },
+        leases: { select: { agreedRent: true, startDate: true, endDate: true } },
+      },
     }),
     db.billingProfile.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
+  // Flatten each unit to its billing basics: agreed rent (from the active lease) +
+  // fixed services, so the form can prefill the editable line-items table.
+  const units = rawUnits.map((u) => ({
+    id: u.id,
+    name: u.name,
+    billingProfileId: u.billingProfileId,
+    agreedRent: getActiveLease(u.leases)?.agreedRent ?? 0,
+    services: u.serviceItems,
+  }));
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
 
   // Latest meter readings per unit (from the most recent bill that recorded them)
