@@ -31,6 +31,8 @@ model Unit {
   billingProfileId String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  @@index([billingProfileId])
 }
 
 // A named set of payment details (owner bank account + QR) so invoices for
@@ -57,6 +59,8 @@ model ServiceItem {
   name         String
   measureUnit  String
   defaultPrice Int
+
+  @@index([unitId])
 }
 
 model Tenant {
@@ -76,6 +80,8 @@ model Tenant {
   coLeaseId           String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+
+  @@index([coLeaseId])
 }
 
 model Lease {
@@ -95,6 +101,9 @@ model Lease {
   bills             Bill[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+
+  @@index([unitId])
+  @@index([tenantId])
 }
 
 model Bill {
@@ -123,6 +132,11 @@ model Bill {
   payments          Payment[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+
+  @@index([leaseId])
+  @@index([billingProfileId])
+  @@index([status])
+  @@index([dueDate])
 }
 
 model Payment {
@@ -136,6 +150,9 @@ model Payment {
   notes           String?
   receiptImageUrl String?
   createdAt       DateTime      @default(now())
+
+  @@index([billId])
+  @@index([paidAt])
 }
 
 model Expense {
@@ -145,6 +162,8 @@ model Expense {
   category    String
   amount      Int
   createdAt   DateTime @default(now())
+
+  @@index([date])
 }
 
 model MaintenanceSchedule {
@@ -160,6 +179,9 @@ model MaintenanceSchedule {
   logs         MaintenanceLog[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+
+  @@index([unitId])
+  @@index([nextDueAt])
 }
 
 model MaintenanceLog {
@@ -168,6 +190,8 @@ model MaintenanceLog {
   scheduleId String
   doneAt     DateTime
   notes      String?
+
+  @@index([scheduleId])
 }
 
 model User {

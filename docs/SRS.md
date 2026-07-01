@@ -262,7 +262,7 @@ Tự động chảy vào cột "Chi" của sổ sách.
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | id | String | PK |
-| email | String | **@unique** (chỉ số duy nhất hiện có trong DB) |
+| email | String | **@unique** |
 | passwordHash | String | bcrypt |
 | role | String | mặc định `admin` |
 | createdAt | DateTime | |
@@ -446,7 +446,7 @@ lại "ok". Hoàn thành ⇒ ghi `MaintenanceLog` + `nextDueAt = doneAt + interv
 
 Xếp theo giá trị/độ rủi ro. Mỗi mục ghi rõ **Vấn đề → Đề xuất → Ưu tiên**.
 
-### 7.1 [CAO] Bổ sung chỉ mục cho khoá ngoại và cột lọc nóng
+### 7.1 [CAO] ✅ ĐÃ TRIỂN KHAI — Chỉ mục cho khoá ngoại và cột lọc nóng
 **Vấn đề:** Lược đồ có **13 quan hệ khoá ngoại nhưng 0 `@@index`** (chỉ có
 `User.email @unique`). SQLite **không** tự tạo chỉ mục cho FK ⇒ mọi truy vấn
 theo FK (nạp hoá đơn của hợp đồng, thanh toán của hoá đơn, dịch vụ của phòng…)
@@ -454,12 +454,14 @@ là quét toàn bảng. Các cột được lọc/sắp xếp thường xuyên c
 `Bill.status`, `Bill.dueDate`, `Payment.paidAt`, `Expense.date`,
 `MaintenanceSchedule.nextDueAt`.
 
-**Đề xuất:** thêm `@@index` cho: `ServiceItem.unitId`, `Lease.unitId`,
-`Lease.tenantId`, `Bill.leaseId`, `Bill.billingProfileId`, `Bill.status`,
-`Bill.dueDate`, `Payment.billId`, `Payment.paidAt`, `Unit.billingProfileId`,
-`Tenant.coLeaseId`, `MaintenanceSchedule.unitId`, `MaintenanceSchedule.nextDueAt`,
-`MaintenanceLog.scheduleId`, `Expense.date`. Đây là thay đổi **an toàn, thuận
-nghịch** (một migration `CREATE INDEX`, không đụng dữ liệu). **Ưu tiên #1.**
+**Đã làm:** thêm 15 `@@index` (migration `20260701120000_add_indexes`) cho:
+`ServiceItem.unitId`, `Lease.unitId`, `Lease.tenantId`, `Bill.leaseId`,
+`Bill.billingProfileId`, `Bill.status`, `Bill.dueDate`, `Payment.billId`,
+`Payment.paidAt`, `Unit.billingProfileId`, `Tenant.coLeaseId`,
+`MaintenanceSchedule.unitId`, `MaintenanceSchedule.nextDueAt`,
+`MaintenanceLog.scheduleId`, `Expense.date`. Thay đổi **an toàn, thuận nghịch**
+(chỉ `CREATE INDEX`, không đụng dữ liệu). Cần chạy `prisma migrate deploy`
+(hoặc `prisma migrate dev` khi dev) để áp dụng.
 
 ### 7.2 [TRUNG BÌNH] Thống nhất khái niệm "người thuộc hợp đồng"
 **Vấn đề:** Người đại diện nối qua `Lease.tenantId`; người ở cùng nối ngược qua
@@ -502,13 +504,13 @@ nhầm.
 nhưng cho cron cập nhật "overdue" hằng ngày; hoặc (c) giữ nguyên và **ghi rõ**
 cột là "chỉ dấu, không dùng để lọc overdue" (đã ghi ở §6.1). **Ưu tiên: thấp.**
 
-### 7.6 [THẤP] `recordPayment` chưa nguyên tử
+### 7.6 [THẤP] ✅ ĐÃ TRIỂN KHAI — `recordPayment` nguyên tử hoá
 **Vấn đề:** create payment → đọc lại bill → update status là 3 truy vấn rời,
 không bọc transaction ⇒ có khe tranh chấp nếu hai thanh toán vào cùng lúc (rủi
 ro thấp với 1 admin).
 
-**Đề xuất:** bọc trong `db.$transaction` (giống `startLease`/`endLease`/
-`deleteBill` đã làm). **Ưu tiên: thấp.**
+**Đã làm:** bọc cả 3 bước trong `db.$transaction` tương tác (giống `startLease`).
+Không đổi hành vi, không cần migration.
 
 ### 7.7 [THẤP] Hợp nhất hồ sơ thanh toán mặc định
 **Vấn đề:** 5 trường thanh toán lặp giữa `Setting` và `BillingProfile`.
@@ -550,6 +552,7 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | 2026-06-28 | `add_meter_readings` | Chỉ số điện/nước + đơn giá trên Bill; đơn giá mặc định trên Setting |
 | 2026-06-29 | `add_billing_profiles` | Bảng BillingProfile; `Unit.billingProfileId`; `Bill.billingProfileId` |
 | 2026-07-01 | `add_co_tenants` | `Tenant.coLeaseId` (người ở cùng) |
+| 2026-07-01 | `add_indexes` | 15 chỉ mục cho toàn bộ FK + cột lọc nóng (§7.1) |
 
 ---
 
