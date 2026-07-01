@@ -467,7 +467,10 @@ là quét toàn bảng. Các cột được lọc/sắp xếp thường xuyên c
 (chỉ `CREATE INDEX`, không đụng dữ liệu). Cần chạy `prisma migrate deploy`
 (hoặc `prisma migrate dev` khi dev) để áp dụng.
 
-### 7.2 [TRUNG BÌNH] Thống nhất khái niệm "người thuộc hợp đồng"
+### 7.2 [TRUNG BÌNH] ❌ KHÔNG LÀM — Thống nhất khái niệm "người thuộc hợp đồng"
+> **Quyết định:** giữ nguyên hai cơ chế hiện tại. Blast radius lớn (7+ nơi đọc
+> `lease.tenant`) trong khi lợi ích ở quy mô 16 phòng là nhỏ. Chỉ xem lại nếu mở
+> nhiều toà nhà / cần chia hoá đơn cho nhiều người.
 **Vấn đề:** Người đại diện nối qua `Lease.tenantId`; người ở cùng nối ngược qua
 `Tenant.coLeaseId`. Hai cơ chế bất đối xứng cho cùng một khái niệm ⇒ khó truy
 vấn "tất cả người trên hợp đồng", và người ở cùng bị "khoá" vào đúng 1 hợp đồng.
@@ -477,7 +480,10 @@ role: 'primary'|'co', isBilled }`. Gọn về mặt mô hình nhưng cần **di 
 liệu** và sửa nhiều truy vấn. Ở quy mô 16 phòng có thể giữ nguyên; nếu giữ, nên
 ghi nhận rõ ràng trong tài liệu (đã làm ở §3.1). **Ưu tiên: thảo luận.**
 
-### 7.3 [TRUNG BÌNH] Truy vấn không giới hạn (load-all)
+### 7.3 [TRUNG BÌNH] ❌ KHÔNG LÀM — Truy vấn không giới hạn (load-all)
+> **Quyết định:** giữ nguyên. Ở quy mô ~192 hoá đơn/năm, tải-hết-rồi-lọc phía
+> client cho tìm kiếm tức thì (UX tốt hơn) và dữ liệu vẫn nhỏ; index mới (§7.1)
+> đã làm join nhanh. Chỉ cân nhắc phân trang khi dữ liệu tới hàng chục nghìn dòng.
 **Vấn đề:**
 - `/hoa-don` nạp **toàn bộ** hoá đơn kèm join rồi tìm/lọc phía client — tăng
   tuyến tính theo thời gian (~192 hoá đơn/năm).
@@ -490,7 +496,10 @@ ghi nhận rõ ràng trong tài liệu (đã làm ở §3.1). **Ưu tiên: thả
 hợp đồng đang hiệu lực; với sổ sách cân nhắc mốc "số dư đầu kỳ" theo năm. Chưa
 cấp bách nhưng nên làm trước khi dữ liệu lớn. **Ưu tiên: trung bình.**
 
-### 7.4 [TRUNG BÌNH] Phân quyền theo vai trò
+### 7.4 [TRUNG BÌNH] ❌ KHÔNG LÀM — Phân quyền theo vai trò
+> **Quyết định:** giữ nguyên. Hệ thống chỉ có admin tin cậy, không có người dùng
+> thường đăng nhập nên kiểm `role` không thêm giá trị an ninh thực tế. Xem lại nếu
+> Giai đoạn 2 mở vai trò "staff".
 **Vấn đề:** `createUser`/`deleteUser` chỉ kiểm `session?.user` (đã đăng nhập),
 chưa kiểm `role`. Hiện an toàn vì mọi người dùng đều là `admin`, nhưng khi thêm
 vai trò "staff" (Giai đoạn 2) sẽ hở quyền.
