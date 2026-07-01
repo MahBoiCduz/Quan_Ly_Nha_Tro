@@ -12,6 +12,7 @@ export async function generateBill(formData: FormData) {
     unitId: formData.get("unitId"),
     periodLabel: formData.get("periodLabel"),
     dueDate: formData.get("dueDate"),
+    billingProfileId: formData.get("billingProfileId") ?? undefined,
     electricityOld: Number(formData.get("electricityOld") ?? 0),
     electricityNew: Number(formData.get("electricityNew") ?? 0),
     electricityRate: Number(formData.get("electricityRate") ?? 0),
@@ -19,7 +20,7 @@ export async function generateBill(formData: FormData) {
     waterNew: Number(formData.get("waterNew") ?? 0),
     waterRate: Number(formData.get("waterRate") ?? 0),
   });
-  if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
   const d = parsed.data;
 
   const unit = await db.unit.findUnique({
@@ -54,6 +55,7 @@ export async function generateBill(formData: FormData) {
       subtotal,
       grandTotal,
       status: "unpaid",
+      billingProfileId: d.billingProfileId || null,
     },
   });
 

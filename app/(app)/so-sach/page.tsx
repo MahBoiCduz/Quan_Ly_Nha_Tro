@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
-import { formatVND, formatDate } from "@/lib/format";
+import { formatVND } from "@/lib/format";
 import { buildLedger, monthlySummary } from "@/lib/ledger";
 import { loadLedgerInputs } from "@/lib/ledger-source";
+import { LedgerTable } from "./ledger-table";
 import { FileDown } from "lucide-react";
 
 export default async function LedgerPage() {
@@ -19,51 +20,7 @@ export default async function LedgerPage() {
         </a>
       </div>
 
-      <div className="card overflow-x-auto">
-        <table className="w-full min-w-[760px] text-sm">
-          <thead>
-            <tr className="bg-cream text-muted">
-              <th className="px-4 py-3 text-center">TT</th>
-              <th className="px-4 py-3 text-left">Ngày</th>
-              <th className="px-4 py-3 text-left">Nội dung</th>
-              <th className="px-4 py-3 text-right">Thu tiền phòng và DV</th>
-              <th className="px-4 py-3 text-right">Thu tiền điện nước</th>
-              <th className="px-4 py-3 text-right">Chi</th>
-              <th className="px-4 py-3 text-right">Tổng thu</th>
-              <th className="px-4 py-3 text-right">Tồn</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className="border-t border-line">
-                <td className="px-4 py-3 text-center text-muted">{i + 1}</td>
-                <td className="px-4 py-3">{formatDate(r.date)}</td>
-                <td className="px-4 py-3">{r.description}</td>
-                <td className="px-4 py-3 text-right">
-                  {r.incomeRoom ? formatVND(r.incomeRoom) : ""}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {r.incomeUtilities ? formatVND(r.incomeUtilities) : ""}
-                </td>
-                <td className="px-4 py-3 text-right text-danger">
-                  {r.expense ? formatVND(r.expense) : ""}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {r.incomeRoom + r.incomeUtilities ? formatVND(r.incomeRoom + r.incomeUtilities) : ""}
-                </td>
-                <td className="px-4 py-3 text-right font-medium text-ink">{formatVND(r.balance)}</td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-4 text-center text-muted">
-                  Chưa có giao dịch.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <LedgerTable rows={rows} />
 
       <div>
         <h2 className="mb-3">Tổng kết theo tháng</h2>

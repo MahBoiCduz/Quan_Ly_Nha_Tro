@@ -8,12 +8,17 @@ import { qrDataUrl } from "@/app/(app)/cai-dat/setting-actions";
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const bill = await db.bill.findUnique({
     where: { id: params.id },
-    include: { lease: { include: { unit: true, tenant: true } } },
+    include: {
+      lease: { include: { unit: { include: { billingProfile: true } }, tenant: true } },
+      billingProfile: true,
+    },
   });
   if (!bill) return NextResponse.json({ error: "Không tìm thấy" }, { status: 404 });
 
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
-  const model = buildInvoiceModel(bill, bill.lease, bill.lease.unit, bill.lease.tenant, setting);
+  // The bill's own profile wins, then the room's default, then the global Setting.
+  const profile = bill.billingProfile ?? bill.lease.unit.billingProfile ?? setting;
+  const model = buildInvoiceModel(bill, bill.lease, bill.lease.unit, bill.lease.tenant, profile);
 
   model.qrImageUrl = await qrDataUrl(model.qrImageUrl);
 
