@@ -11,12 +11,9 @@ const optionalInt = z.preprocess(
   z.number().int().min(0).optional(),
 );
 
+// Operational config only. The payment fields (bank account / QR / notes) now
+// live on the default BillingProfile and are validated by profileSchema.
 export const settingSchema = z.object({
-  bankAccountName: optionalStr,
-  bankAccountNo: optionalStr,
-  bankName: optionalStr,
-  qrImageUrl: optionalStr,
-  invoiceNotes: optionalStr,
   adminZaloUserId: optionalStr,
   defaultElectricityRate: optionalInt,
   defaultWaterRate: optionalInt,

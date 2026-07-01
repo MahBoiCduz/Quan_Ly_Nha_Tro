@@ -136,11 +136,13 @@ khác nhau (ví dụ tài khoản của một đồng sở hữu).
 | bankAccountName / bankAccountNo / bankName | String? | thông tin ngân hàng |
 | qrImageUrl | String? | ảnh QR (URL Blob hoặc `/api/files/...`) |
 | invoiceNotes | String? | ghi chú in trên hoá đơn |
+| isDefault | Boolean | `true` ở **đúng một** hàng: hồ sơ mặc định (fallback của hoá đơn). Enforce ở tầng app. |
 | createdAt / updatedAt | DateTime | |
 
-> **Trùng lặp thiết kế:** 5 trường (bankAccountName, bankAccountNo, bankName,
-> qrImageUrl, invoiceNotes) lặp lại nguyên vẹn trong `Setting` — nơi giữ hồ sơ
-> **mặc định**. Xem khuyến nghị §7.1.
+> **Hồ sơ mặc định (§7.7 — ĐÃ HỢP NHẤT):** trước đây 5 trường thanh toán bị lặp
+> giữa `Setting` và `BillingProfile`. Nay hồ sơ mặc định là **một hàng
+> `BillingProfile` có `isDefault = true`** (id `default_profile`); `Setting` chỉ
+> còn cấu hình vận hành.
 
 #### ServiceItem — Dịch vụ theo phòng
 | Trường | Kiểu | Ghi chú |
@@ -271,9 +273,11 @@ Tự động chảy vào cột "Chi" của sổ sách.
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | id | String | PK, mặc định `"singleton"` |
-| bankAccountName / bankAccountNo / bankName / qrImageUrl / invoiceNotes | String? | **hồ sơ thanh toán mặc định** (trùng với BillingProfile) |
 | adminZaloUserId | String? | Zalo user id nhận thông báo |
 | defaultElectricityRate / defaultWaterRate | Int? | đơn giá điện/nước mặc định khi tạo hoá đơn |
+
+> Các trường thanh toán (bankAccountName…) đã chuyển sang `BillingProfile{isDefault}`
+> (§7.7). `Setting` chỉ còn cấu hình vận hành.
 
 #### NotificationLog — Chống gửi trùng thông báo
 | Trường | Kiểu | Ghi chú |
@@ -512,11 +516,15 @@ ro thấp với 1 admin).
 **Đã làm:** bọc cả 3 bước trong `db.$transaction` tương tác (giống `startLease`).
 Không đổi hành vi, không cần migration.
 
-### 7.7 [THẤP] Hợp nhất hồ sơ thanh toán mặc định
+### 7.7 [THẤP] ✅ ĐÃ TRIỂN KHAI — Hợp nhất hồ sơ thanh toán mặc định
 **Vấn đề:** 5 trường thanh toán lặp giữa `Setting` và `BillingProfile`.
-**Đề xuất:** hoặc coi hồ sơ mặc định là một `BillingProfile` có cờ `isDefault`
-(bỏ trùng, thống nhất một nguồn), hoặc giữ như hiện tại và tài liệu hoá (đã làm).
-Chuỗi ưu tiên chọn hồ sơ đã rõ ràng (§FR-4). **Ưu tiên: thấp.**
+**Đã làm:** thêm cờ `isDefault` cho `BillingProfile`; hồ sơ mặc định là một hàng
+`isDefault = true` (id `default_profile`); **bỏ** 5 cột thanh toán khỏi `Setting`
+(migration `20260702000000_consolidate_default_billing_profile` — chép dữ liệu từ
+`Setting` sang hàng mặc định trước khi DROP COLUMN, không mất dữ liệu). Chuỗi
+resolve đổi thành `bill.billingProfile ?? unit.billingProfile ?? default`
+(`hoa-don/[id]/pdf/route.ts`). UI Cài đặt có mục "Hồ sơ thu tiền mặc định" riêng;
+không cho xoá hồ sơ mặc định. Bất biến "chỉ một mặc định" enforce ở tầng app.
 
 ### 7.8 [THẤP] Chống hoá đơn trùng kỳ
 **Vấn đề:** Không có ràng buộc chống tạo hai hoá đơn cùng `(leaseId, periodLabel)`.
@@ -553,6 +561,7 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | 2026-06-29 | `add_billing_profiles` | Bảng BillingProfile; `Unit.billingProfileId`; `Bill.billingProfileId` |
 | 2026-07-01 | `add_co_tenants` | `Tenant.coLeaseId` (người ở cùng) |
 | 2026-07-01 | `add_indexes` | 15 chỉ mục cho toàn bộ FK + cột lọc nóng (§7.1) |
+| 2026-07-02 | `consolidate_default_billing_profile` | `BillingProfile.isDefault`; chuyển hồ sơ mặc định khỏi `Setting`, bỏ 5 cột (§7.7) |
 
 ---
 

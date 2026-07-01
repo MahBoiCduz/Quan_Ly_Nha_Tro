@@ -46,6 +46,10 @@ model BillingProfile {
   bankName        String?
   qrImageUrl      String?
   invoiceNotes    String?
+  // Exactly one row has isDefault = true: the fallback profile used by invoices
+  // when neither the bill nor the room specifies one. Enforced in the app layer
+  // (SQLite/Prisma can't express a partial unique index without schema drift).
+  isDefault       Boolean  @default(false)
   units           Unit[]
   bills           Bill[]
   createdAt       DateTime @default(now())
@@ -202,13 +206,11 @@ model User {
   createdAt    DateTime @default(now())
 }
 
+// Operational config singleton. The default *payment* profile (bank account /
+// QR / notes) used to live here but was consolidated into a
+// BillingProfile{isDefault} row (see migration 20260702000000).
 model Setting {
   id                     String  @id @default("singleton")
-  bankAccountName        String?
-  bankAccountNo          String?
-  bankName               String?
-  qrImageUrl             String?
-  invoiceNotes           String?
   adminZaloUserId        String?
   defaultElectricityRate Int?
   defaultWaterRate       Int?

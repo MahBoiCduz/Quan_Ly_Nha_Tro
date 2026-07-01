@@ -45,7 +45,14 @@ async function main() {
   // Settings singleton row.
   await db.setting.upsert({ where: { id: "singleton" }, update: {}, create: { id: "singleton" } });
 
-  console.log("Seed complete: admin user + 16 units.");
+  // Default payment profile — the invoice fallback when a bill/room picks none.
+  await db.billingProfile.upsert({
+    where: { id: "default_profile" },
+    update: {},
+    create: { id: "default_profile", name: "Mặc định", isDefault: true },
+  });
+
+  console.log("Seed complete: admin user + 16 units + default billing profile.");
 }
 
 main().finally(() => db.$disconnect());

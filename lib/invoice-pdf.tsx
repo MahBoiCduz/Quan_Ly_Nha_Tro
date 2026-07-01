@@ -62,7 +62,7 @@ export function buildInvoiceModel(
   lease: { depositAmount: number },
   unit: { name: string },
   tenant: { fullName: string; phone: string; vehiclePlate: string | null },
-  setting: { bankAccountName: string | null; bankAccountNo: string | null; bankName: string | null; qrImageUrl: string | null; invoiceNotes: string | null } | null,
+  profile: { bankAccountName: string | null; bankAccountNo: string | null; bankName: string | null; qrImageUrl: string | null; invoiceNotes: string | null } | null,
 ): InvoiceModel {
   return {
     unitName: unit.name,
@@ -84,11 +84,11 @@ export function buildInvoiceModel(
     waterRate: bill.waterRate ?? 0,
     grandTotal: bill.grandTotal,
     depositAmount: lease.depositAmount,
-    notes: setting?.invoiceNotes ?? "",
-    bankAccountName: setting?.bankAccountName ?? "",
-    bankAccountNo: setting?.bankAccountNo ?? "",
-    bankName: setting?.bankName ?? "",
-    qrImageUrl: setting?.qrImageUrl ?? null,
+    notes: profile?.invoiceNotes ?? "",
+    bankAccountName: profile?.bankAccountName ?? "",
+    bankAccountNo: profile?.bankAccountNo ?? "",
+    bankName: profile?.bankName ?? "",
+    qrImageUrl: profile?.qrImageUrl ?? null,
   };
 }
 
