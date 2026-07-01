@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getActiveLease } from "@/lib/rooms";
-import { buildDefaultLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
+import { normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
 import { billGenerateSchema } from "@/lib/bill-schema";
 
 export async function generateBill(formData: FormData) {
@@ -13,6 +13,7 @@ export async function generateBill(formData: FormData) {
     periodLabel: formData.get("periodLabel"),
     dueDate: formData.get("dueDate"),
     billingProfileId: formData.get("billingProfileId") ?? undefined,
+    lineItems: formData.get("lineItems"),
     electricityOld: Number(formData.get("electricityOld") ?? 0),
     electricityNew: Number(formData.get("electricityNew") ?? 0),
     electricityRate: Number(formData.get("electricityRate") ?? 0),
@@ -32,7 +33,8 @@ export async function generateBill(formData: FormData) {
   const lease = getActiveLease(unit.leases);
   if (!lease) return { error: "Phòng chưa có hợp đồng đang hiệu lực" };
 
-  const lineItems = buildDefaultLineItems(unit.serviceItems, lease.agreedRent);
+  // Totals are recomputed from the submitted quantity × unitPrice, never trusted.
+  const lineItems = normalizeLineItems(d.lineItems);
   const subtotal = computeSubtotal(lineItems);
   const electricityAmount = computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
   const waterAmount = computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);

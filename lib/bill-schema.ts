@@ -7,6 +7,13 @@ export function vnToday(): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
 }
 
+const lineItemSchema = z.object({
+  name: z.string().trim().min(1),
+  measureUnit: z.string().optional().default(""),
+  unitPrice: z.number().min(0),
+  quantity: z.number().min(0),
+});
+
 export const billGenerateSchema = z
   .object({
     unitId: z.string().min(1),
@@ -14,6 +21,14 @@ export const billGenerateSchema = z
     dueDate: z.string().min(1),
     // "" = use the room's default / the global Setting profile.
     billingProfileId: z.string().optional(),
+    // Editable rent + service rows from the form, sent as a JSON string.
+    lineItems: z.preprocess(
+      (v) => {
+        if (typeof v !== "string") return v;
+        try { return JSON.parse(v); } catch { return undefined; }
+      },
+      z.array(lineItemSchema).min(1),
+    ),
     // Meter readings + unit prices; the amount is derived (computeMeterAmount).
     electricityOld: z.number().min(0),
     electricityNew: z.number().min(0),

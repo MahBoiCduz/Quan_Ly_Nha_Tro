@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  lineTotal, buildDefaultLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount, billStatusFor,
+  lineTotal, buildDefaultLineItems, normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount, billStatusFor,
 } from "@/lib/billing";
 
 describe("lineTotal", () => {
@@ -18,6 +18,27 @@ describe("buildDefaultLineItems", () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({ name: "Internet", quantity: 1, unitPrice: 100000, total: 100000 });
     expect(items[1]).toMatchObject({ name: "Tiền thuê phòng", unitPrice: 4800000, total: 4800000 });
+  });
+  it("scales quantity and total by the number of months", () => {
+    const items = buildDefaultLineItems(
+      [{ name: "Internet", measureUnit: "phòng", defaultPrice: 100000 }],
+      4800000,
+      3,
+    );
+    expect(items[0]).toMatchObject({ quantity: 3, unitPrice: 100000, total: 300000 });
+    expect(items[1]).toMatchObject({ name: "Tiền thuê phòng", quantity: 3, total: 14400000 });
+  });
+});
+
+describe("normalizeLineItems", () => {
+  it("recomputes total from quantity × unitPrice (ignores any sent total)", () => {
+    const items = normalizeLineItems([
+      { name: "Phòng", measureUnit: "phòng", unitPrice: 5000000, quantity: 2 },
+      { name: "Wifi", unitPrice: 100000, quantity: 1 },
+    ]);
+    expect(items[0]).toEqual({ name: "Phòng", measureUnit: "phòng", unitPrice: 5000000, quantity: 2, total: 10000000 });
+    expect(items[1].measureUnit).toBe("");
+    expect(items[1].total).toBe(100000);
   });
 });
 

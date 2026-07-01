@@ -18,6 +18,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
       leases: {
         include: {
           tenant: true,
+          coTenants: true,
           bills: {
             include: { payments: { select: { amount: true } } },
             orderBy: { createdAt: "desc" },
@@ -56,7 +57,12 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
 
       {lease ? (
         <>
-          <TenantInfoSection tenant={lease.tenant} unitId={unit.id} />
+          <TenantInfoSection
+            primary={lease.tenant}
+            coTenants={lease.coTenants}
+            leaseId={lease.id}
+            unitId={unit.id}
+          />
 
           <section>
             <h2 className="mb-2 font-semibold text-ink">Hợp đồng</h2>
