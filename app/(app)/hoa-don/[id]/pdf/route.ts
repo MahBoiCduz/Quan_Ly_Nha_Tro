@@ -15,9 +15,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
   if (!bill) return NextResponse.json({ error: "Không tìm thấy" }, { status: 404 });
 
-  const setting = await db.setting.findUnique({ where: { id: "singleton" } });
-  // The bill's own profile wins, then the room's default, then the global Setting.
-  const profile = bill.billingProfile ?? bill.lease.unit.billingProfile ?? setting;
+  const defaultProfile = await db.billingProfile.findFirst({ where: { isDefault: true } });
+  // The bill's own profile wins, then the room's, then the default profile.
+  const profile = bill.billingProfile ?? bill.lease.unit.billingProfile ?? defaultProfile;
   const model = buildInvoiceModel(bill, bill.lease, bill.lease.unit, bill.lease.tenant, profile);
 
   model.qrImageUrl = await qrDataUrl(model.qrImageUrl);

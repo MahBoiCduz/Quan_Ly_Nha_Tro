@@ -31,6 +31,8 @@ model Unit {
   billingProfileId String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  @@index([billingProfileId])
 }
 
 // A named set of payment details (owner bank account + QR) so invoices for
@@ -44,6 +46,10 @@ model BillingProfile {
   bankName        String?
   qrImageUrl      String?
   invoiceNotes    String?
+  // Exactly one row has isDefault = true: the fallback profile used by invoices
+  // when neither the bill nor the room specifies one. Enforced in the app layer
+  // (SQLite/Prisma can't express a partial unique index without schema drift).
+  isDefault       Boolean  @default(false)
   units           Unit[]
   bills           Bill[]
   createdAt       DateTime @default(now())
@@ -57,6 +63,8 @@ model ServiceItem {
   name         String
   measureUnit  String
   defaultPrice Int
+
+  @@index([unitId])
 }
 
 model Tenant {
@@ -76,6 +84,8 @@ model Tenant {
   coLeaseId           String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+
+  @@index([coLeaseId])
 }
 
 model Lease {
@@ -95,6 +105,9 @@ model Lease {
   bills             Bill[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+
+  @@index([unitId])
+  @@index([tenantId])
 }
 
 model Bill {
@@ -123,6 +136,11 @@ model Bill {
   payments          Payment[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
+
+  @@index([leaseId])
+  @@index([billingProfileId])
+  @@index([status])
+  @@index([dueDate])
 }
 
 model Payment {
@@ -136,6 +154,9 @@ model Payment {
   notes           String?
   receiptImageUrl String?
   createdAt       DateTime      @default(now())
+
+  @@index([billId])
+  @@index([paidAt])
 }
 
 model Expense {
@@ -145,6 +166,8 @@ model Expense {
   category    String
   amount      Int
   createdAt   DateTime @default(now())
+
+  @@index([date])
 }
 
 model MaintenanceSchedule {
@@ -160,6 +183,9 @@ model MaintenanceSchedule {
   logs         MaintenanceLog[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+
+  @@index([unitId])
+  @@index([nextDueAt])
 }
 
 model MaintenanceLog {
@@ -168,6 +194,8 @@ model MaintenanceLog {
   scheduleId String
   doneAt     DateTime
   notes      String?
+
+  @@index([scheduleId])
 }
 
 model User {
@@ -178,13 +206,11 @@ model User {
   createdAt    DateTime @default(now())
 }
 
+// Operational config singleton. The default *payment* profile (bank account /
+// QR / notes) used to live here but was consolidated into a
+// BillingProfile{isDefault} row (see migration 20260702000000).
 model Setting {
   id                     String  @id @default("singleton")
-  bankAccountName        String?
-  bankAccountNo          String?
-  bankName               String?
-  qrImageUrl             String?
-  invoiceNotes           String?
   adminZaloUserId        String?
   defaultElectricityRate Int?
   defaultWaterRate       Int?

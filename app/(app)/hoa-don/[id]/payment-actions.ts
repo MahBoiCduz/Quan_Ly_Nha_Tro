@@ -38,23 +38,27 @@ export async function recordPayment(billId: string, formData: FormData) {
   if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
   const d = parsed.data;
 
-  await db.payment.create({
-    data: {
-      billId,
-      amount: d.amount,
-      paidAt: new Date(d.paidAt),
-      method: d.method,
-      confirmedBy: d.confirmedBy ?? null,
-      notes: d.notes ?? null,
-      receiptImageUrl: d.receiptImageUrl ?? null,
-    },
-  });
+  // Create the payment and recompute the bill's cached status in one transaction
+  // so two concurrent payments can't race and leave the status stale.
+  await db.$transaction(async (tx) => {
+    await tx.payment.create({
+      data: {
+        billId,
+        amount: d.amount,
+        paidAt: new Date(d.paidAt),
+        method: d.method,
+        confirmedBy: d.confirmedBy ?? null,
+        notes: d.notes ?? null,
+        receiptImageUrl: d.receiptImageUrl ?? null,
+      },
+    });
 
-  const bill = await db.bill.findUnique({ where: { id: billId }, include: { payments: true } });
-  if (bill) {
-    const status = billStatusFor(bill.grandTotal, totalPaid(bill.payments), bill.dueDate);
-    await db.bill.update({ where: { id: billId }, data: { status } });
-  }
+    const bill = await tx.bill.findUnique({ where: { id: billId }, include: { payments: true } });
+    if (bill) {
+      const status = billStatusFor(bill.grandTotal, totalPaid(bill.payments), bill.dueDate);
+      await tx.bill.update({ where: { id: billId }, data: { status } });
+    }
+  });
 
   revalidatePath(`/hoa-don/${billId}`);
   revalidatePath("/hoa-don");

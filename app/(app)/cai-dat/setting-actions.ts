@@ -50,7 +50,25 @@ export async function updateBillingProfile(id: string, formData: FormData): Prom
   return { ok: true };
 }
 
+// The default profile is edited (never renamed) via its own "Hồ sơ mặc định"
+// form, which omits the name field. Update whichever row carries the flag.
+export async function updateDefaultProfile(formData: FormData): Promise<ActionResult> {
+  const parsed = profileSchema.omit({ name: true }).safeParse({
+    bankAccountName: formData.get("bankAccountName"),
+    bankAccountNo: formData.get("bankAccountNo"),
+    bankName: formData.get("bankName"),
+    qrImageUrl: formData.get("qrImageUrl"),
+    invoiceNotes: formData.get("invoiceNotes"),
+  });
+  if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
+  await db.billingProfile.updateMany({ where: { isDefault: true }, data: parsed.data });
+  revalidatePath("/cai-dat");
+  return { ok: true };
+}
+
 export async function deleteBillingProfile(id: string): Promise<ActionResult> {
+  const profile = await db.billingProfile.findUnique({ where: { id }, select: { isDefault: true } });
+  if (profile?.isDefault) return { error: "Không thể xoá hồ sơ mặc định" };
   // Detach rooms/bills that pointed at this profile so they fall back to default.
   await db.$transaction([
     db.unit.updateMany({ where: { billingProfileId: id }, data: { billingProfileId: null } }),
@@ -75,11 +93,6 @@ export async function saveRoomAssignments(
 
 export async function saveSettings(formData: FormData) {
   const parsed = settingSchema.safeParse({
-    bankAccountName: formData.get("bankAccountName"),
-    bankAccountNo: formData.get("bankAccountNo"),
-    bankName: formData.get("bankName"),
-    qrImageUrl: formData.get("qrImageUrl"),
-    invoiceNotes: formData.get("invoiceNotes"),
     adminZaloUserId: formData.get("adminZaloUserId"),
     defaultElectricityRate: formData.get("defaultElectricityRate"),
     defaultWaterRate: formData.get("defaultWaterRate"),

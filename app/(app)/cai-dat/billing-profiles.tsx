@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { ActionButton } from "@/components/action-button";
-import { createBillingProfile, updateBillingProfile, deleteBillingProfile } from "./setting-actions";
+import {
+  createBillingProfile,
+  updateBillingProfile,
+  updateDefaultProfile,
+  deleteBillingProfile,
+} from "./setting-actions";
 import { Plus, Trash2 } from "lucide-react";
 
 export type Profile = {
@@ -14,6 +19,7 @@ export type Profile = {
   bankName: string | null;
   qrImageUrl: string | null;
   invoiceNotes: string | null;
+  isDefault: boolean;
 };
 
 async function uploadImage(file: File): Promise<string> {
@@ -24,15 +30,27 @@ async function uploadImage(file: File): Promise<string> {
   return (await res.json()).url as string;
 }
 
-function ProfileCard({ profile, onDone }: { profile?: Profile; onDone?: () => void }) {
+// One card renders three cases: the default profile editor (no name, no delete),
+// creating a new extra profile, and editing an existing one.
+function ProfileCard({
+  profile,
+  onDone,
+  isDefaultEditor,
+}: {
+  profile?: Profile;
+  onDone?: () => void;
+  isDefaultEditor?: boolean;
+}) {
   const toast = useToast();
   const [qr, setQr] = useState(profile?.qrImageUrl ?? "");
   const isNew = !profile;
 
   async function onSubmit(formData: FormData) {
-    const res = isNew
-      ? await createBillingProfile(formData)
-      : await updateBillingProfile(profile!.id, formData);
+    const res = isDefaultEditor
+      ? await updateDefaultProfile(formData)
+      : isNew
+        ? await createBillingProfile(formData)
+        : await updateBillingProfile(profile!.id, formData);
     if (res?.error) toast.error(res.error);
     else {
       toast.success("Đã lưu hồ sơ");
@@ -43,10 +61,12 @@ function ProfileCard({ profile, onDone }: { profile?: Profile; onDone?: () => vo
   return (
     <form action={onSubmit} className="card space-y-3 p-4">
       <input type="hidden" name="qrImageUrl" value={qr} />
-      <div>
-        <label className="label">Tên hồ sơ</label>
-        <input name="name" defaultValue={profile?.name ?? ""} placeholder="vd: Tài khoản của bố" required className="input" />
-      </div>
+      {!isDefaultEditor && (
+        <div>
+          <label className="label">Tên hồ sơ</label>
+          <input name="name" defaultValue={profile?.name ?? ""} placeholder="vd: Tài khoản của bố" required className="input" />
+        </div>
+      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="label">Tên tài khoản</label>
@@ -86,7 +106,7 @@ function ProfileCard({ profile, onDone }: { profile?: Profile; onDone?: () => vo
       </div>
       <div className="flex items-center gap-3">
         <button className="btn-primary">{isNew ? "Tạo hồ sơ" : "Lưu"}</button>
-        {!isNew && (
+        {!isNew && !isDefaultEditor && (
           <ActionButton
             action={deleteBillingProfile.bind(null, profile!.id)}
             success="Đã xóa hồ sơ"
@@ -101,16 +121,32 @@ function ProfileCard({ profile, onDone }: { profile?: Profile; onDone?: () => vo
   );
 }
 
+// The default payment profile: shown on invoices whenever the bill/room doesn't
+// pick a specific one. It can't be renamed or deleted, only edited.
+export function DefaultProfileForm({ profile }: { profile: Profile | null }) {
+  return (
+    <section className="space-y-3">
+      <div>
+        <h2>Hồ sơ thu tiền mặc định</h2>
+        <p className="mt-1 text-sm text-muted">
+          Số tài khoản + QR in trên hóa đơn khi phòng hoặc hóa đơn không chọn hồ sơ riêng.
+        </p>
+      </div>
+      <ProfileCard profile={profile ?? undefined} isDefaultEditor />
+    </section>
+  );
+}
+
 export function BillingProfiles({ profiles }: { profiles: Profile[] }) {
   const [adding, setAdding] = useState(false);
 
   return (
     <section className="space-y-4">
       <div>
-        <h2>Hồ sơ thu tiền</h2>
+        <h2>Hồ sơ thu tiền khác</h2>
         <p className="mt-1 text-sm text-muted">
-          Mỗi hồ sơ là một bộ số tài khoản + QR riêng. Hồ sơ <strong>Mặc định</strong> dùng thông tin ở phần trên.
-          Gán hồ sơ cho từng phòng ở mục bên dưới.
+          Mỗi hồ sơ là một bộ số tài khoản + QR riêng (vd: tài khoản của một đồng sở hữu).
+          Gán hồ sơ cho từng phòng ở mục bên dưới; phòng không gán sẽ dùng hồ sơ mặc định.
         </p>
       </div>
       {profiles.map((p) => (

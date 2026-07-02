@@ -19,7 +19,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
         leases: { select: { agreedRent: true, startDate: true, endDate: true } },
       },
     }),
-    db.billingProfile.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.billingProfile.findMany({ where: { isDefault: false }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   // Flatten each unit to its billing basics: agreed rent (from the active lease) +
   // fixed services, so the form can prefill the editable line-items table.

@@ -2,6 +2,11 @@
 **Date:** 2026-06-18
 **Phase:** 1 (Internal/Admin only)
 
+> ⚠️ **Bản thiết kế gốc — đã lạc hậu.** Tài liệu đặc tả hiện hành (SRS) là
+> [`docs/SRS.md`](../../SRS.md). Bản này giữ lại làm lịch sử; các tính năng thêm
+> sau (hồ sơ thanh toán, người ở cùng, chỉ số điện/nước, quản lý người dùng…)
+> chỉ được phản ánh trong SRS.
+
 ---
 
 ## Overview
