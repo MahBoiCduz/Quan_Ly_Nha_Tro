@@ -1,29 +1,11 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { billStatusFor } from "@/lib/billing";
-import { z } from "zod";
+import { paymentSchema } from "@/lib/payment-schema";
 
 export function totalPaid(payments: { amount: number }[]): number {
   return payments.reduce((sum, p) => sum + p.amount, 0);
 }
-
-const paymentSchema = z.object({
-  amount: z.number().int().positive(),
-  paidAt: z.string().min(1),
-  method: z.enum(["cash", "bank_transfer"]),
-  confirmedBy: z.preprocess(
-    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
-    z.string().optional(),
-  ),
-  notes: z.preprocess(
-    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
-    z.string().optional(),
-  ),
-  receiptImageUrl: z.preprocess(
-    (v) => (v == null || (typeof v === "string" && v.trim() === "") ? undefined : v),
-    z.string().optional(),
-  ),
-});
 
 export async function recordPayment(billId: string, formData: FormData) {
   "use server";
@@ -33,7 +15,7 @@ export async function recordPayment(billId: string, formData: FormData) {
     method: formData.get("method"),
     confirmedBy: formData.get("confirmedBy"),
     notes: formData.get("notes"),
-    receiptImageUrl: formData.get("receiptImageUrl"),
+    receiptImages: formData.get("receiptImages"),
   });
   if (!parsed.success) return { error: "Dữ liệu không hợp lệ" };
   const d = parsed.data;
@@ -49,7 +31,7 @@ export async function recordPayment(billId: string, formData: FormData) {
         method: d.method,
         confirmedBy: d.confirmedBy ?? null,
         notes: d.notes ?? null,
-        receiptImageUrl: d.receiptImageUrl ?? null,
+        receiptImages: d.receiptImages,
       },
     });
 

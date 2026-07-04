@@ -152,7 +152,10 @@ model Payment {
   method          String
   confirmedBy     String?
   notes           String?
-  receiptImageUrl String?
+  // Receipt/transfer screenshots for this payment: a JSON array of image URLs.
+  // A tenant may send several photos for one transfer (was a single
+  // receiptImageUrl before migration 20260704000000).
+  receiptImages   Json          @default("[]")
   createdAt       DateTime      @default(now())
 
   @@index([billId])

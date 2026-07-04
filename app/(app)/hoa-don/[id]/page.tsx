@@ -107,18 +107,29 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       <section>
         <h2 className="mb-2">Đã thanh toán: {formatVND(paid)} / {formatVND(bill.grandTotal)}</h2>
         <ul className="card mb-3 overflow-hidden text-sm">
-          {bill.payments.map((p) => (
-            <li key={p.id} className="flex justify-between border-b border-line px-4 py-3 last:border-0 hover:bg-cream">
-              <span className="text-ink">{formatDate(p.paidAt)} · {p.method === "cash" ? "Tiền mặt" : "Chuyển khoản"}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-ink">{formatVND(p.amount)}</span>
-                {p.receiptImageUrl && <a href={p.receiptImageUrl} target="_blank" className="text-sm underline">biên lai</a>}
-              </span>
-            </li>
-          ))}
+          {bill.payments.map((p) => {
+            const receipts = (p.receiptImages as unknown as string[]) ?? [];
+            return (
+              <li key={p.id} className="space-y-2 border-b border-line px-4 py-3 last:border-0 hover:bg-cream">
+                <div className="flex justify-between">
+                  <span className="text-ink">{formatDate(p.paidAt)} · {p.method === "cash" ? "Tiền mặt" : "Chuyển khoản"}</span>
+                  <span className="text-ink">{formatVND(p.amount)}</span>
+                </div>
+                {receipts.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {receipts.map((url, i) => (
+                      <a key={url} href={url} target="_blank">
+                        <img src={url} alt={`biên lai ${i + 1}`} className="h-16 w-16 rounded border object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
           {bill.payments.length === 0 && <li className="px-4 py-3 text-muted">Chưa có thanh toán.</li>}
         </ul>
-        <PaymentPanel billId={bill.id} action={recordPayment} />
+        <PaymentPanel billId={bill.id} remaining={Math.max(0, bill.grandTotal - paid)} action={recordPayment} />
       </section>
     </div>
   );
