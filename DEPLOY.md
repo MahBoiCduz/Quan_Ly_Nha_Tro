@@ -89,4 +89,14 @@ Vercel Cron tự gửi header `Authorization: Bearer <CRON_SECRET>` nên không 
 ## Lưu ý
 
 - **Ảnh CCCD trên Vercel Blob là public URL** (link ngẫu nhiên, khó đoán nhưng về kỹ thuật ai có link đều xem được). Với dữ liệu CCCD nhạy cảm, nếu cần chặt hơn có thể proxy qua route có xác thực — báo mình làm thêm sau.
-- Khi đổi schema sau này: chạy `prisma migrate dev` ở local để sinh file SQL mới, rồi `turso db shell nhatro < <file SQL mới>` để áp lên Turso.
+- **Khi đổi schema sau này**: mỗi migration mới trong `prisma/migrations/` phải được áp lên Turso **trước khi** deploy code dùng schema đó (deploy Vercel KHÔNG tự chạy migration). Áp đúng migration còn thiếu bằng script (chạy được trên Windows):
+
+```bash
+# PowerShell
+$env:DATABASE_URL="libsql://nhatro-xxx.turso.io"
+$env:DATABASE_AUTH_TOKEN="<token>"
+node scripts/push-turso-schema.mjs <tên thư mục migration mới>
+# vd: node scripts/push-turso-schema.mjs 20260704000000_payment_multiple_receipt_images
+```
+
+  > Không chạy script này **không có tham số** trên DB đã có dữ liệu — nó sẽ áp lại từ migration đầu tiên và báo lỗi "table already exists". Không tham số chỉ dành cho DB trống (lần setup đầu).
