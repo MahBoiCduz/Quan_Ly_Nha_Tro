@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { billGenerateSchema } from "@/lib/bill-schema";
+import { billGenerateSchema, billUpdateSchema } from "@/lib/bill-schema";
 
 const base = {
   unitId: "u1", periodLabel: "Tháng 6/2026", dueDate: "2030-06-05",
@@ -36,5 +36,23 @@ describe("billGenerateSchema", () => {
   });
   it("rejects an empty lineItems array", () => {
     expect(billGenerateSchema.safeParse({ ...base, lineItems: "[]" }).success).toBe(false);
+  });
+});
+
+describe("billUpdateSchema", () => {
+  it("accepts a valid update with meter readings", () => {
+    expect(billUpdateSchema.safeParse(base).success).toBe(true);
+  });
+  it("accepts a due date in the past (unlike generate)", () => {
+    expect(billUpdateSchema.safeParse({ ...base, dueDate: "2020-01-01" }).success).toBe(true);
+  });
+  it("rejects an electricity reading that went down", () => {
+    expect(billUpdateSchema.safeParse({ ...base, electricityOld: 100, electricityNew: 50 }).success).toBe(false);
+  });
+  it("rejects a water reading that went down", () => {
+    expect(billUpdateSchema.safeParse({ ...base, waterOld: 60, waterNew: 58 }).success).toBe(false);
+  });
+  it("rejects an empty period label", () => {
+    expect(billUpdateSchema.safeParse({ ...base, periodLabel: "" }).success).toBe(false);
   });
 });

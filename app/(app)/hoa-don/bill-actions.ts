@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getActiveLease } from "@/lib/rooms";
 import { normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
-import { billGenerateSchema } from "@/lib/bill-schema";
+import { billGenerateSchema, billUpdateSchema } from "@/lib/bill-schema";
 
 export async function generateBill(formData: FormData) {
   const parsed = billGenerateSchema.safeParse({
@@ -63,6 +63,68 @@ export async function generateBill(formData: FormData) {
 
   revalidatePath("/hoa-don");
   redirect(`/hoa-don/${bill.id}`);
+}
+
+export async function updateBill(billId: string, formData: FormData) {
+  const parsed = billUpdateSchema.safeParse({
+    unitId: formData.get("unitId"),
+    periodLabel: formData.get("periodLabel"),
+    dueDate: formData.get("dueDate"),
+    billingProfileId: formData.get("billingProfileId") ?? undefined,
+    lineItems: formData.get("lineItems"),
+    electricityOld: Number(formData.get("electricityOld") ?? 0),
+    electricityNew: Number(formData.get("electricityNew") ?? 0),
+    electricityRate: Number(formData.get("electricityRate") ?? 0),
+    waterOld: Number(formData.get("waterOld") ?? 0),
+    waterNew: Number(formData.get("waterNew") ?? 0),
+    waterRate: Number(formData.get("waterRate") ?? 0),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
+  const d = parsed.data;
+
+  const bill = await db.bill.findUnique({
+    where: { id: billId },
+    include: { payments: true, lease: { select: { unitId: true } } },
+  });
+  if (!bill) return { error: "Không tìm thấy hóa đơn" };
+
+  // Once money is recorded or the bill is fully paid, lock it from editing.
+  if (bill.status === "paid") return { error: "Hóa đơn đã thanh toán, không thể sửa" };
+  if (bill.payments.length > 0) return { error: "Hóa đơn đã có thanh toán, không thể sửa" };
+
+  // Totals are recomputed from the submitted data — never trusted.
+  const lineItems = normalizeLineItems(d.lineItems);
+  const subtotal = computeSubtotal(lineItems);
+  const electricityAmount = computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
+  const waterAmount = computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
+  const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
+
+  await db.bill.update({
+    where: { id: billId },
+    data: {
+      periodLabel: d.periodLabel,
+      dueDate: new Date(d.dueDate),
+      lineItems,
+      electricityAmount,
+      waterAmount,
+      electricityOld: d.electricityOld,
+      electricityNew: d.electricityNew,
+      electricityRate: d.electricityRate,
+      waterOld: d.waterOld,
+      waterNew: d.waterNew,
+      waterRate: d.waterRate,
+      subtotal,
+      grandTotal,
+      status: "unpaid",
+      billingProfileId: d.billingProfileId || null,
+    },
+  });
+
+  revalidatePath("/hoa-don");
+  revalidatePath(`/hoa-don/${billId}`);
+  revalidatePath("/so-sach");
+  revalidatePath(`/phong/${bill.lease.unitId}`);
+  redirect(`/hoa-don/${billId}`);
 }
 
 export async function deleteBill(id: string) {

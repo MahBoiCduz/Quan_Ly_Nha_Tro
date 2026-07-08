@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatVND, formatDate } from "@/lib/format";
@@ -7,7 +8,7 @@ import { BackLink } from "@/components/back-link";
 import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
 import { DeleteBillButton } from "./delete-bill-button";
-import { FileDown } from "lucide-react";
+import { FileDown, Pencil } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã thu", overdue: "Quá hạn" };
 
@@ -39,6 +40,11 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           >
             <FileDown size={18} /> Xuất PDF
           </a>
+          {display !== "paid" && bill.payments.length === 0 && (
+            <Link href={`/hoa-don/${bill.id}/edit`} className="btn-secondary">
+              <Pencil size={18} /> Sửa
+            </Link>
+          )}
           <DeleteBillButton billId={bill.id} />
         </div>
       </div>

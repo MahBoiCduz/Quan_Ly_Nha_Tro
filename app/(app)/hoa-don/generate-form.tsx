@@ -5,13 +5,54 @@ import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { formatVND } from "@/lib/format";
 import { computeMeterAmount, buildDefaultLineItems } from "@/lib/billing";
-import { generateBill } from "./bill-actions";
+import type { LineItem } from "@/lib/billing";
+import { generateBill, updateBill } from "./bill-actions";
 
 type Service = { name: string; measureUnit: string; defaultPrice: number };
 type Unit = { id: string; name: string; billingProfileId: string | null; agreedRent: number; services: Service[] };
 type Profile = { id: string; name: string };
 type Readings = Record<string, { elec: number; water: number }>;
 type Row = { name: string; measureUnit: string; unitPrice: number; quantity: number };
+
+// Pre-filled values for edit mode (line items come from the bill's frozen snapshot).
+export type BillInitialValues = {
+  unitId: string;
+  unitName: string;
+  periodLabel: string;
+  dueDate: string; // "YYYY-MM-DD"
+  billingProfileId: string | null;
+  lineItems: LineItem[];
+  electricityOld: number;
+  electricityNew: number;
+  electricityRate: number;
+  waterOld: number;
+  waterNew: number;
+  waterRate: number;
+};
+
+type Props =
+  | {
+      mode?: "create";
+      billId?: never;
+      initialValues?: never;
+      units: Unit[];
+      profiles: Profile[];
+      defaultUnitId?: string;
+      lastReadings: Readings;
+      defaultElectricityRate: number;
+      defaultWaterRate: number;
+    }
+  | {
+      mode: "edit";
+      billId: string;
+      initialValues: BillInitialValues;
+      units?: never;
+      profiles: Profile[];
+      defaultUnitId?: never;
+      lastReadings?: never;
+      defaultElectricityRate?: never;
+      defaultWaterRate?: never;
+    };
 
 function rowsForUnit(u: Unit | undefined, months: number): Row[] {
   if (!u) return [];
@@ -23,42 +64,65 @@ function rowsForUnit(u: Unit | undefined, months: number): Row[] {
   }));
 }
 
-export function GenerateForm({
-  units,
-  profiles,
-  defaultUnitId,
-  lastReadings,
-  defaultElectricityRate,
-  defaultWaterRate,
-}: {
-  units: Unit[];
-  profiles: Profile[];
-  defaultUnitId?: string;
-  lastReadings: Readings;
-  defaultElectricityRate: number;
-  defaultWaterRate: number;
-}) {
+function rowsFromLineItems(items: LineItem[]): Row[] {
+  return items.map((li) => ({
+    name: li.name,
+    measureUnit: li.measureUnit,
+    unitPrice: li.unitPrice,
+    quantity: li.quantity,
+  }));
+}
+
+export function GenerateForm(props: Props) {
   const toast = useToast();
-  const profileForUnit = (id?: string) => units.find((u) => u.id === id)?.billingProfileId ?? "";
-  const [unitId, setUnitId] = useState(defaultUnitId ?? "");
-  const [profileId, setProfileId] = useState(profileForUnit(defaultUnitId));
+  const isEdit = props.mode === "edit";
+
+  // ── State ──────────────────────────────────────────────────────
+  const profileForUnit = (id?: string) =>
+    !isEdit && props.units ? (props.units.find((u) => u.id === id)?.billingProfileId ?? "") : "";
+
+  const [unitId, setUnitId] = useState(
+    isEdit ? props.initialValues.unitId : (props.defaultUnitId ?? ""),
+  );
+  const [profileId, setProfileId] = useState(
+    isEdit ? (props.initialValues.billingProfileId ?? "") : profileForUnit(props.defaultUnitId),
+  );
   const [months, setMonths] = useState("1");
-  const [rows, setRows] = useState<Row[]>(() => rowsForUnit(units.find((u) => u.id === defaultUnitId), 1));
-  const [elecOld, setElecOld] = useState<string>(String(lastReadings[unitId]?.elec ?? ""));
-  const [elecNew, setElecNew] = useState("");
-  const [elecRate, setElecRate] = useState(String(defaultElectricityRate));
-  const [waterOld, setWaterOld] = useState<string>(String(lastReadings[unitId]?.water ?? ""));
-  const [waterNew, setWaterNew] = useState("");
-  const [waterRate, setWaterRate] = useState(String(defaultWaterRate));
+  const [rows, setRows] = useState<Row[]>(() => {
+    if (isEdit) return rowsFromLineItems(props.initialValues.lineItems);
+    return rowsForUnit(props.units.find((u) => u.id === props.defaultUnitId), 1);
+  });
+  const [periodLabel, setPeriodLabel] = useState(isEdit ? props.initialValues.periodLabel : "");
+  const [dueDate, setDueDate] = useState(isEdit ? props.initialValues.dueDate : "");
+
+  // Meter readings
+  const [elecOld, setElecOld] = useState<string>(() => {
+    if (isEdit) return String(props.initialValues.electricityOld);
+    return String(props.lastReadings?.[props.defaultUnitId ?? ""]?.elec ?? "");
+  });
+  const [elecNew, setElecNew] = useState(isEdit ? String(props.initialValues.electricityNew) : "");
+  const [elecRate, setElecRate] = useState(
+    isEdit ? String(props.initialValues.electricityRate) : String(props.defaultElectricityRate ?? 4000),
+  );
+  const [waterOld, setWaterOld] = useState<string>(() => {
+    if (isEdit) return String(props.initialValues.waterOld);
+    return String(props.lastReadings?.[props.defaultUnitId ?? ""]?.water ?? "");
+  });
+  const [waterNew, setWaterNew] = useState(isEdit ? String(props.initialValues.waterNew) : "");
+  const [waterRate, setWaterRate] = useState(
+    isEdit ? String(props.initialValues.waterRate) : String(props.defaultWaterRate ?? 35000),
+  );
 
   const monthsNum = Math.max(1, Number(months) || 1);
 
+  // ── Handlers ───────────────────────────────────────────────────
   function onUnitChange(id: string) {
+    if (isEdit) return;
     setUnitId(id);
-    setElecOld(lastReadings[id]?.elec != null ? String(lastReadings[id].elec) : "");
-    setWaterOld(lastReadings[id]?.water != null ? String(lastReadings[id].water) : "");
+    setElecOld(props.lastReadings?.[id]?.elec != null ? String(props.lastReadings[id].elec) : "");
+    setWaterOld(props.lastReadings?.[id]?.water != null ? String(props.lastReadings[id].water) : "");
     setProfileId(profileForUnit(id));
-    setRows(rowsForUnit(units.find((u) => u.id === id), monthsNum));
+    setRows(rowsForUnit(props.units?.find((u) => u.id === id), monthsNum));
   }
 
   function onMonthsChange(v: string) {
@@ -70,7 +134,7 @@ export function GenerateForm({
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const addRow = () =>
-    setRows((rs) => [...rs, { name: "", measureUnit: "", unitPrice: 0, quantity: monthsNum }]);
+    setRows((rs) => [...rs, { name: "", measureUnit: "", unitPrice: 0, quantity: isEdit ? 1 : monthsNum }]);
   const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
   const validRows = rows.filter((r) => r.name.trim() !== "");
@@ -78,9 +142,10 @@ export function GenerateForm({
   const elecAmount = computeMeterAmount(Number(elecOld || 0), Number(elecNew || 0), Number(elecRate || 0));
   const waterAmount = computeMeterAmount(Number(waterOld || 0), Number(waterNew || 0), Number(waterRate || 0));
 
-  // Local "today" as YYYY-MM-DD for the date input's min + the pre-submit check.
+  // Local "today" as YYYY-MM-DD for create-mode due-date check.
   const today = new Intl.DateTimeFormat("en-CA").format(new Date());
 
+  // ── Submit ─────────────────────────────────────────────────────
   async function onSubmit(formData: FormData) {
     if (validRows.length === 0) {
       toast.error("Cần ít nhất 1 dòng tiền phòng/dịch vụ");
@@ -94,49 +159,72 @@ export function GenerateForm({
       toast.error("Số nước mới phải lớn hơn hoặc bằng số cũ");
       return;
     }
-    if (String(formData.get("dueDate") ?? "") < today) {
+    // Only enforce future due-date on create; edits may legitimately have a past date.
+    if (!isEdit && String(formData.get("dueDate") ?? "") < today) {
       toast.error("Hạn thanh toán phải từ hôm nay trở đi");
       return;
     }
-    const res = await generateBill(formData);
-    if (res?.error) toast.error(res.error);
+
+    if (isEdit) {
+      const res = await updateBill(props.billId, formData);
+      if (res?.error) toast.error(res.error);
+      // On success, updateBill redirects back to the bill detail page.
+    } else {
+      const res = await generateBill(formData);
+      if (res?.error) toast.error(res.error);
+    }
   }
 
+  // ── Render ─────────────────────────────────────────────────────
   return (
     <form action={onSubmit} className="max-w-2xl space-y-4">
       {/* lineItems rides along as a native hidden input (reliable in prod build) */}
       <input type="hidden" name="lineItems" value={JSON.stringify(validRows)} />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="label">Phòng</label>
-          <select name="unitId" required className="input" value={unitId} onChange={(e) => onUnitChange(e.target.value)}>
-            <option value="">— Chọn phòng —</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>{u.name}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label">Số tháng tính tiền</label>
-          <input type="number" min="1" className="input" value={months} onChange={(e) => onMonthsChange(e.target.value)} />
-        </div>
+        {/* Unit selector — dropdown in create mode, read-only display in edit mode */}
+        {isEdit ? (
+          <div>
+            <label className="label">Phòng</label>
+            <input type="hidden" name="unitId" value={props.initialValues.unitId} />
+            <p className="input bg-cream text-ink">{props.initialValues.unitName}</p>
+          </div>
+        ) : (
+          <div>
+            <label className="label">Phòng</label>
+            <select name="unitId" required className="input" value={unitId} onChange={(e) => onUnitChange(e.target.value)}>
+              <option value="">— Chọn phòng —</option>
+              {props.units.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Months selector — only in create mode; edit mode preserves stored quantities */}
+        {!isEdit && (
+          <div>
+            <label className="label">Số tháng tính tiền</label>
+            <input type="number" min="1" className="input" value={months} onChange={(e) => onMonthsChange(e.target.value)} />
+          </div>
+        )}
+
         <div>
           <label className="label">Kì thanh toán</label>
-          <input name="periodLabel" placeholder="vd: Tháng 6/2026" required className="input" />
+          <input name="periodLabel" placeholder="vd: Tháng 6/2026" required className="input" value={periodLabel} onChange={(e) => setPeriodLabel(e.target.value)} />
         </div>
         <div>
           <label className="label">Hạn thanh toán</label>
-          <input name="dueDate" type="date" min={today} required className="input" />
+          <input name="dueDate" type="date" min={isEdit ? undefined : today} required className="input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
         </div>
       </div>
 
-      {profiles.length > 0 && (
+      {props.profiles.length > 0 && (
         <div>
           <label className="label">Hồ sơ thu tiền (STK/QR)</label>
           <select name="billingProfileId" className="input" value={profileId} onChange={(e) => setProfileId(e.target.value)}>
             <option value="">Mặc định</option>
-            {profiles.map((p) => (
+            {props.profiles.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
@@ -179,7 +267,9 @@ export function GenerateForm({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-2 text-center text-muted">Chọn phòng để tự điền tiền phòng + dịch vụ.</td>
+                  <td colSpan={5} className="py-2 text-center text-muted">
+                    {isEdit ? "Chưa có dòng nào." : "Chọn phòng để tự điền tiền phòng + dịch vụ."}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -231,7 +321,7 @@ export function GenerateForm({
         <p className="text-sm text-muted">Tiền nước: <span className="font-medium text-ink">{formatVND(waterAmount)}</span></p>
       </fieldset>
 
-      <button className="btn-primary">Tạo hóa đơn</button>
+      <button className="btn-primary">{isEdit ? "Lưu thay đổi" : "Tạo hóa đơn"}</button>
     </form>
   );
 }
