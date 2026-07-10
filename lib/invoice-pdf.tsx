@@ -17,6 +17,7 @@ Font.register({
 });
 
 export type InvoiceModel = {
+  type: string;
   unitName: string;
   periodLabel: string;
   tenantName: string;
@@ -44,6 +45,7 @@ export type InvoiceModel = {
 };
 
 type MeterBill = {
+  type: string;
   periodLabel: string; subtotal: number; electricityAmount: number; waterAmount: number;
   grandTotal: number; lineItems: unknown;
   electricityOld?: number | null; electricityNew?: number | null; electricityRate?: number | null;
@@ -65,6 +67,7 @@ export function buildInvoiceModel(
   profile: { bankAccountName: string | null; bankAccountNo: string | null; bankName: string | null; qrImageUrl: string | null; invoiceNotes: string | null } | null,
 ): InvoiceModel {
   return {
+    type: bill.type,
     unitName: unit.name,
     periodLabel: bill.periodLabel,
     tenantName: tenant.fullName,
@@ -152,34 +155,43 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
             <Text style={[s.cell, s.cPrice]}>Đơn giá</Text>
             <Text style={[s.cell, s.cTotal]}>Thành tiền</Text>
           </View>
-          {/* Line item rows */}
-          {model.rows.map((r, i) => (
-            <View style={s.row} key={i}>
-              <Text style={[s.cell, s.cTT]}>{i + 1}</Text>
-              <Text style={[s.cell, s.cName]}>{r.name}</Text>
-              <Text style={[s.cell, s.cUnit]}>{r.measureUnit}</Text>
-              <Text style={[s.cell, s.cQty]}>{r.quantity}</Text>
-              <Text style={[s.cell, s.cPrice]}>{formatVND(r.unitPrice)}</Text>
-              <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
-            </View>
-          ))}
-          {/* Subtotal: room + services, excluding electricity & water */}
-          <View style={s.row}>
-            <Text style={[s.cell, { width: "82%" }]}>
-              Tổng tiền nhà và DV (trừ điện, nước)
-            </Text>
-            <Text style={[s.cell, s.cTotal]}>{formatVND(model.subtotal)}</Text>
-          </View>
-          <MeterRow
-            label="Tiền điện" unit="kWh"
-            oldR={model.electricityOld} newR={model.electricityNew}
-            usage={model.electricityUsage} rate={model.electricityRate} amount={model.electricityAmount}
-          />
-          <MeterRow
-            label="Tiền nước" unit="m³"
-            oldR={model.waterOld} newR={model.waterNew}
-            usage={model.waterUsage} rate={model.waterRate} amount={model.waterAmount}
-          />
+          {/* Line item rows — hidden for elec_water bills */}
+          {model.type !== "elec_water" && (
+            <>
+              {model.rows.map((r, i) => (
+                <View style={s.row} key={i}>
+                  <Text style={[s.cell, s.cTT]}>{i + 1}</Text>
+                  <Text style={[s.cell, s.cName]}>{r.name}</Text>
+                  <Text style={[s.cell, s.cUnit]}>{r.measureUnit}</Text>
+                  <Text style={[s.cell, s.cQty]}>{r.quantity}</Text>
+                  <Text style={[s.cell, s.cPrice]}>{formatVND(r.unitPrice)}</Text>
+                  <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
+                </View>
+              ))}
+              {/* Subtotal: room + services, excluding electricity & water */}
+              <View style={s.row}>
+                <Text style={[s.cell, { width: "82%" }]}>
+                  Tổng tiền nhà và DV (trừ điện, nước)
+                </Text>
+                <Text style={[s.cell, s.cTotal]}>{formatVND(model.subtotal)}</Text>
+              </View>
+            </>
+          )}
+          {/* Meter rows — hidden for room bills */}
+          {model.type !== "room" && (
+            <>
+              <MeterRow
+                label="Tiền điện" unit="kWh"
+                oldR={model.electricityOld} newR={model.electricityNew}
+                usage={model.electricityUsage} rate={model.electricityRate} amount={model.electricityAmount}
+              />
+              <MeterRow
+                label="Tiền nước" unit="m³"
+                oldR={model.waterOld} newR={model.waterNew}
+                usage={model.waterUsage} rate={model.waterRate} amount={model.waterAmount}
+              />
+            </>
+          )}
           {/* Grand total */}
           <View style={s.row}>
             <Text style={[s.cell, { width: "82%", fontWeight: "bold" }]}>Tổng cộng</Text>

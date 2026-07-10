@@ -16,6 +16,7 @@ const lineItemSchema = z.object({
 
 // Shared base shape: fields that both generate and update accept.
 const billFieldsSchema = z.object({
+  type: z.enum(["room", "elec_water", "both"]),
   unitId: z.string().min(1),
   periodLabel: z.string().min(1),
   dueDate: z.string().min(1),
@@ -27,41 +28,54 @@ const billFieldsSchema = z.object({
       if (typeof v !== "string") return v;
       try { return JSON.parse(v); } catch { return undefined; }
     },
-    z.array(lineItemSchema).min(1),
+    z.array(lineItemSchema).min(0),
   ),
   // Meter readings + unit prices; the amount is derived (computeMeterAmount).
-  electricityOld: z.number().min(0),
-  electricityNew: z.number().min(0),
-  electricityRate: z.number().int().min(0),
-  waterOld: z.number().min(0),
-  waterNew: z.number().min(0),
-  waterRate: z.number().int().min(0),
+  // Optional with 0 default — hidden sections won't send these fields.
+  electricityOld: z.number().min(0).optional().default(0),
+  electricityNew: z.number().min(0).optional().default(0),
+  electricityRate: z.number().int().min(0).optional().default(0),
+  waterOld: z.number().min(0).optional().default(0),
+  waterNew: z.number().min(0).optional().default(0),
+  waterRate: z.number().int().min(0).optional().default(0),
 });
 
-// For creating a new bill: the due date can't be in the past, and meter
-// readings must count up (new >= old; equal = no usage is allowed).
+// For creating a new bill: the due date can't be in the past. Meter readings
+// must count up (only enforced for elec_water and both types). Line items
+// are required for room and both types.
 export const billGenerateSchema = billFieldsSchema
-  .refine((d) => d.electricityNew >= d.electricityOld, {
+  // Room or both: must have at least 1 line item
+  .refine((d) => d.type === "elec_water" || d.lineItems.length >= 1, {
+    message: "Cần ít nhất 1 dòng tiền phòng/dịch vụ",
+    path: ["lineItems"],
+  })
+  // Elec-water or both: meter readings must count up
+  .refine((d) => d.type === "room" || d.electricityNew >= d.electricityOld, {
     message: "Số điện mới phải lớn hơn hoặc bằng số cũ",
     path: ["electricityNew"],
   })
-  .refine((d) => d.waterNew >= d.waterOld, {
+  .refine((d) => d.type === "room" || d.waterNew >= d.waterOld, {
     message: "Số nước mới phải lớn hơn hoặc bằng số cũ",
     path: ["waterNew"],
   })
+  // Due date must be today or later (all types)
   .refine((d) => d.dueDate >= vnToday(), {
     message: "Hạn thanh toán phải từ hôm nay trở đi",
     path: ["dueDate"],
   });
 
 // For editing an existing bill: the due date may already be in the past,
-// so only the meter-reading checks apply.
+// so only the type-conditional meter-reading and line-item checks apply.
 export const billUpdateSchema = billFieldsSchema
-  .refine((d) => d.electricityNew >= d.electricityOld, {
+  .refine((d) => d.type === "elec_water" || d.lineItems.length >= 1, {
+    message: "Cần ít nhất 1 dòng tiền phòng/dịch vụ",
+    path: ["lineItems"],
+  })
+  .refine((d) => d.type === "room" || d.electricityNew >= d.electricityOld, {
     message: "Số điện mới phải lớn hơn hoặc bằng số cũ",
     path: ["electricityNew"],
   })
-  .refine((d) => d.waterNew >= d.waterOld, {
+  .refine((d) => d.type === "room" || d.waterNew >= d.waterOld, {
     message: "Số nước mới phải lớn hơn hoặc bằng số cũ",
     path: ["waterNew"],
   });

@@ -55,58 +55,76 @@ export default async function BillDetailPage({ params }: { params: { id: string 
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[480px] text-sm">
-          <thead>
-            <tr className="bg-cream text-muted">
-              <th className="border-b border-line px-3 py-2 text-left text-sm">Dịch vụ</th>
-              <th className="border-b border-line px-3 py-2 text-sm">ĐVT</th>
-              <th className="border-b border-line px-3 py-2 text-sm">SL</th>
-              <th className="border-b border-line px-3 py-2 text-right text-sm">Đơn giá</th>
-              <th className="border-b border-line px-3 py-2 text-right text-sm">Thành tiền</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it, i) => (
-              <tr key={i} className="border-b border-line hover:bg-cream">
-                <td className="px-3 py-2 text-ink">{it.name}</td>
-                <td className="px-3 py-2 text-center text-ink">{it.measureUnit}</td>
-                <td className="px-3 py-2 text-center text-ink">{it.quantity}</td>
-                <td className="px-3 py-2 text-right text-ink">{formatVND(it.unitPrice)}</td>
-                <td className="px-3 py-2 text-right text-ink">{formatVND(it.total)}</td>
+          {/* Line items section — hidden for elec_water bills */}
+          {bill.type !== "elec_water" && (
+            <>
+              <thead>
+                <tr className="bg-cream text-muted">
+                  <th className="border-b border-line px-3 py-2 text-left text-sm">Dịch vụ</th>
+                  <th className="border-b border-line px-3 py-2 text-sm">ĐVT</th>
+                  <th className="border-b border-line px-3 py-2 text-sm">SL</th>
+                  <th className="border-b border-line px-3 py-2 text-right text-sm">Đơn giá</th>
+                  <th className="border-b border-line px-3 py-2 text-right text-sm">Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={i} className="border-b border-line hover:bg-cream">
+                    <td className="px-3 py-2 text-ink">{it.name}</td>
+                    <td className="px-3 py-2 text-center text-ink">{it.measureUnit}</td>
+                    <td className="px-3 py-2 text-center text-ink">{it.quantity}</td>
+                    <td className="px-3 py-2 text-right text-ink">{formatVND(it.unitPrice)}</td>
+                    <td className="px-3 py-2 text-right text-ink">{formatVND(it.total)}</td>
+                  </tr>
+                ))}
+                <tr className="border-b border-line font-semibold">
+                  <td className="px-3 py-2 text-ink" colSpan={4}>Tổng tiền nhà và DV (trừ điện, nước)</td>
+                  <td className="px-3 py-2 text-right text-ink">{formatVND(bill.subtotal)}</td>
+                </tr>
+              </tbody>
+            </>
+          )}
+          {/* Electricity row — hidden for room bills */}
+          {bill.type !== "room" && (
+            <tbody>
+              <tr className="border-b border-line">
+                <td className="px-3 py-2 text-ink" colSpan={4}>
+                  Tiền điện
+                  {bill.electricityNew != null && bill.electricityOld != null && (
+                    <span className="text-muted">
+                      {" "}({bill.electricityNew} − {bill.electricityOld} = {bill.electricityNew - bill.electricityOld} kWh
+                      × {formatVND(bill.electricityRate ?? 0)})
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right text-ink">{formatVND(bill.electricityAmount)}</td>
               </tr>
-            ))}
-            <tr className="border-b border-line font-semibold">
-              <td className="px-3 py-2 text-ink" colSpan={4}>Tổng tiền nhà và DV (trừ điện, nước)</td>
-              <td className="px-3 py-2 text-right text-ink">{formatVND(bill.subtotal)}</td>
-            </tr>
-            <tr className="border-b border-line">
-              <td className="px-3 py-2 text-ink" colSpan={4}>
-                Tiền điện
-                {bill.electricityNew != null && bill.electricityOld != null && (
-                  <span className="text-muted">
-                    {" "}({bill.electricityNew} − {bill.electricityOld} = {bill.electricityNew - bill.electricityOld} kWh
-                    × {formatVND(bill.electricityRate ?? 0)})
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-right text-ink">{formatVND(bill.electricityAmount)}</td>
-            </tr>
-            <tr className="border-b border-line">
-              <td className="px-3 py-2 text-ink" colSpan={4}>
-                Tiền nước
-                {bill.waterNew != null && bill.waterOld != null && (
-                  <span className="text-muted">
-                    {" "}({bill.waterNew} − {bill.waterOld} = {Math.round((bill.waterNew - bill.waterOld) * 100) / 100} m³
-                    × {formatVND(bill.waterRate ?? 0)})
-                  </span>
-                )}
-              </td>
-              <td className="px-3 py-2 text-right text-ink">{formatVND(bill.waterAmount)}</td>
-            </tr>
+            </tbody>
+          )}
+          {/* Water row — hidden for room bills */}
+          {bill.type !== "room" && (
+            <tbody>
+              <tr className="border-b border-line">
+                <td className="px-3 py-2 text-ink" colSpan={4}>
+                  Tiền nước
+                  {bill.waterNew != null && bill.waterOld != null && (
+                    <span className="text-muted">
+                      {" "}({bill.waterNew} − {bill.waterOld} = {Math.round((bill.waterNew - bill.waterOld) * 100) / 100} m³
+                      × {formatVND(bill.waterRate ?? 0)})
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right text-ink">{formatVND(bill.waterAmount)}</td>
+              </tr>
+            </tbody>
+          )}
+          {/* Grand total — always shown */}
+          <tfoot>
             <tr className="font-bold">
               <td className="px-3 py-2 text-ink" colSpan={4}>Tổng cộng</td>
               <td className="px-3 py-2 text-right text-ink">{formatVND(bill.grandTotal)}</td>
             </tr>
-          </tbody>
+          </tfoot>
         </table>
       </div>
 

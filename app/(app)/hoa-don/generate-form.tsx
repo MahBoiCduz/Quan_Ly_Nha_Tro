@@ -16,6 +16,7 @@ type Row = { name: string; measureUnit: string; unitPrice: number; quantity: num
 
 // Pre-filled values for edit mode (line items come from the bill's frozen snapshot).
 export type BillInitialValues = {
+  type: string;
   unitId: string;
   unitName: string;
   periodLabel: string;
@@ -54,6 +55,14 @@ type Props =
       defaultWaterRate?: never;
     };
 
+type BillType = "room" | "elec_water" | "both";
+
+const TYPE_OPTIONS: { key: BillType; label: string }[] = [
+  { key: "both", label: "Cả hai" },
+  { key: "room", label: "Tiền phòng" },
+  { key: "elec_water", label: "Tiền điện nước" },
+];
+
 function rowsForUnit(u: Unit | undefined, months: number): Row[] {
   if (!u) return [];
   return buildDefaultLineItems(u.services, u.agreedRent, months).map((li) => ({
@@ -80,6 +89,15 @@ export function GenerateForm(props: Props) {
   // ── State ──────────────────────────────────────────────────────
   const profileForUnit = (id?: string) =>
     !isEdit && props.units ? (props.units.find((u) => u.id === id)?.billingProfileId ?? "") : "";
+
+  const [billType, setBillType] = useState<BillType>(() => {
+    if (isEdit) {
+      const t = props.initialValues.type as BillType;
+      if (t === "room" || t === "elec_water" || t === "both") return t;
+      return "both";
+    }
+    return "both";
+  });
 
   const [unitId, setUnitId] = useState(
     isEdit ? props.initialValues.unitId : (props.defaultUnitId ?? ""),
@@ -147,15 +165,15 @@ export function GenerateForm(props: Props) {
 
   // ── Submit ─────────────────────────────────────────────────────
   async function onSubmit(formData: FormData) {
-    if (validRows.length === 0) {
+    if (billType !== "elec_water" && validRows.length === 0) {
       toast.error("Cần ít nhất 1 dòng tiền phòng/dịch vụ");
       return;
     }
-    if (Number(elecNew || 0) < Number(elecOld || 0)) {
+    if (billType !== "room" && Number(elecNew || 0) < Number(elecOld || 0)) {
       toast.error("Số điện mới phải lớn hơn hoặc bằng số cũ");
       return;
     }
-    if (Number(waterNew || 0) < Number(waterOld || 0)) {
+    if (billType !== "room" && Number(waterNew || 0) < Number(waterOld || 0)) {
       toast.error("Số nước mới phải lớn hơn hoặc bằng số cũ");
       return;
     }
@@ -178,8 +196,27 @@ export function GenerateForm(props: Props) {
   // ── Render ─────────────────────────────────────────────────────
   return (
     <form action={onSubmit} className="max-w-2xl space-y-4">
-      {/* lineItems rides along as a native hidden input (reliable in prod build) */}
+      {/* Type + lineItems ride along as hidden inputs */}
+      <input type="hidden" name="type" value={billType} />
       <input type="hidden" name="lineItems" value={JSON.stringify(validRows)} />
+
+      {/* Bill type selector */}
+      <div className="flex gap-2">
+        {TYPE_OPTIONS.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => setBillType(opt.key)}
+            className={
+              billType === opt.key
+                ? "rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-surface"
+                : "rounded-full border border-line px-4 py-1.5 text-sm text-muted hover:bg-cream"
+            }
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Unit selector — dropdown in create mode, read-only display in edit mode */}
@@ -232,94 +269,103 @@ export function GenerateForm(props: Props) {
         </div>
       )}
 
-      <fieldset className="card space-y-2 p-4">
-        <legend className="px-1 text-sm font-medium text-muted">Tiền phòng & dịch vụ</legend>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[440px] text-sm">
-            <thead>
-              <tr className="text-xs text-muted">
-                <th className="py-1 text-left font-medium">Tên dịch vụ</th>
-                <th className="w-28 py-1 text-right font-medium">Đơn giá</th>
-                <th className="w-16 py-1 text-center font-medium">Số lượng</th>
-                <th className="w-28 py-1 text-right font-medium">Thành tiền</th>
-                <th className="w-8 py-1"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  <td className="py-1 pr-2">
-                    <input className="input" placeholder="Tên dịch vụ" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })} />
-                  </td>
-                  <td className="py-1 pr-2">
-                    <input type="number" min="0" className="input text-right" value={r.unitPrice} onChange={(e) => updateRow(i, { unitPrice: Number(e.target.value) || 0 })} />
-                  </td>
-                  <td className="py-1 pr-2">
-                    <input type="number" min="0" step="any" className="input text-center" value={r.quantity} onChange={(e) => updateRow(i, { quantity: Number(e.target.value) || 0 })} />
-                  </td>
-                  <td className="py-1 pr-2 text-right text-ink">{formatVND(r.unitPrice * r.quantity)}</td>
-                  <td className="py-1 text-center">
-                    <button type="button" onClick={() => removeRow(i)} className="text-danger" aria-label="Xóa dòng">
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
+      {/* Line items section — hidden for elec_water */}
+      {billType !== "elec_water" && (
+        <fieldset className="card space-y-2 p-4">
+          <legend className="px-1 text-sm font-medium text-muted">Tiền phòng & dịch vụ</legend>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[440px] text-sm">
+              <thead>
+                <tr className="text-xs text-muted">
+                  <th className="py-1 text-left font-medium">Tên dịch vụ</th>
+                  <th className="w-28 py-1 text-right font-medium">Đơn giá</th>
+                  <th className="w-16 py-1 text-center font-medium">Số lượng</th>
+                  <th className="w-28 py-1 text-right font-medium">Thành tiền</th>
+                  <th className="w-8 py-1"></th>
                 </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-2 text-center text-muted">
-                    {isEdit ? "Chưa có dòng nào." : "Chọn phòng để tự điền tiền phòng + dịch vụ."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between">
-          <button type="button" onClick={addRow} className="btn-secondary inline-flex items-center gap-1 text-sm">
-            <Plus size={16} /> Thêm dòng
-          </button>
-          <span className="text-sm text-muted">Tạm tính: <span className="font-medium text-ink">{formatVND(subtotal)}</span></span>
-        </div>
-      </fieldset>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="py-1 pr-2">
+                      <input className="input" placeholder="Tên dịch vụ" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })} />
+                    </td>
+                    <td className="py-1 pr-2">
+                      <input type="number" min="0" className="input text-right" value={r.unitPrice} onChange={(e) => updateRow(i, { unitPrice: Number(e.target.value) || 0 })} />
+                    </td>
+                    <td className="py-1 pr-2">
+                      <input type="number" min="0" step="any" className="input text-center" value={r.quantity} onChange={(e) => updateRow(i, { quantity: Number(e.target.value) || 0 })} />
+                    </td>
+                    <td className="py-1 pr-2 text-right text-ink">{formatVND(r.unitPrice * r.quantity)}</td>
+                    <td className="py-1 text-center">
+                      <button type="button" onClick={() => removeRow(i)} className="text-danger" aria-label="Xóa dòng">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-2 text-center text-muted">
+                      {isEdit ? "Chưa có dòng nào." : "Chọn phòng để tự điền tiền phòng + dịch vụ."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={addRow} className="btn-secondary inline-flex items-center gap-1 text-sm">
+              <Plus size={16} /> Thêm dòng
+            </button>
+            <span className="text-sm text-muted">Tạm tính: <span className="font-medium text-ink">{formatVND(subtotal)}</span></span>
+          </div>
+        </fieldset>
+      )}
 
-      <fieldset className="card space-y-3 p-4">
-        <legend className="px-1 text-sm font-medium text-muted">Điện</legend>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="label">Số cũ</label>
-            <input name="electricityOld" type="number" min="0" className="input" value={elecOld} onChange={(e) => setElecOld(e.target.value)} />
+      {/* Electricity section — hidden for room */}
+      {billType !== "room" && (
+        <fieldset className="card space-y-3 p-4">
+          <legend className="px-1 text-sm font-medium text-muted">Điện</legend>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="label">Số cũ</label>
+              <input name="electricityOld" type="number" min="0" className="input" value={elecOld} onChange={(e) => setElecOld(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Số mới</label>
+              <input name="electricityNew" type="number" min="0" className="input" value={elecNew} onChange={(e) => setElecNew(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Đơn giá</label>
+              <input name="electricityRate" type="number" min="0" className="input" value={elecRate} onChange={(e) => setElecRate(e.target.value)} />
+            </div>
           </div>
-          <div>
-            <label className="label">Số mới</label>
-            <input name="electricityNew" type="number" min="0" className="input" value={elecNew} onChange={(e) => setElecNew(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Đơn giá</label>
-            <input name="electricityRate" type="number" min="0" className="input" value={elecRate} onChange={(e) => setElecRate(e.target.value)} />
-          </div>
-        </div>
-        <p className="text-sm text-muted">Tiền điện: <span className="font-medium text-ink">{formatVND(elecAmount)}</span></p>
-      </fieldset>
+          <p className="text-sm text-muted">Tiền điện: <span className="font-medium text-ink">{formatVND(elecAmount)}</span></p>
+        </fieldset>
+      )}
 
-      <fieldset className="card space-y-3 p-4">
-        <legend className="px-1 text-sm font-medium text-muted">Nước</legend>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="label">Số cũ</label>
-            <input name="waterOld" type="number" min="0" step="any" className="input" value={waterOld} onChange={(e) => setWaterOld(e.target.value)} />
+      {/* Water section — hidden for room */}
+      {billType !== "room" && (
+        <fieldset className="card space-y-3 p-4">
+          <legend className="px-1 text-sm font-medium text-muted">Nước</legend>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="label">Số cũ</label>
+              <input name="waterOld" type="number" min="0" step="any" className="input" value={waterOld} onChange={(e) => setWaterOld(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Số mới</label>
+              <input name="waterNew" type="number" min="0" step="any" className="input" value={waterNew} onChange={(e) => setWaterNew(e.target.value)} />
+            </div>
+            <div>
+              <label className="label">Đơn giá</label>
+              <input name="waterRate" type="number" min="0" className="input" value={waterRate} onChange={(e) => setWaterRate(e.target.value)} />
+            </div>
           </div>
-          <div>
-            <label className="label">Số mới</label>
-            <input name="waterNew" type="number" min="0" step="any" className="input" value={waterNew} onChange={(e) => setWaterNew(e.target.value)} />
-          </div>
-          <div>
-            <label className="label">Đơn giá</label>
-            <input name="waterRate" type="number" min="0" className="input" value={waterRate} onChange={(e) => setWaterRate(e.target.value)} />
-          </div>
-        </div>
-        <p className="text-sm text-muted">Tiền nước: <span className="font-medium text-ink">{formatVND(waterAmount)}</span></p>
-      </fieldset>
+          <p className="text-sm text-muted">Tiền nước: <span className="font-medium text-ink">{formatVND(waterAmount)}</span></p>
+        </fieldset>
+      )}
 
       <button className="btn-primary">{isEdit ? "Lưu thay đổi" : "Tạo hóa đơn"}</button>
     </form>

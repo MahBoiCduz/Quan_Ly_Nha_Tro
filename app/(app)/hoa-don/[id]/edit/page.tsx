@@ -30,6 +30,7 @@ export default async function EditBillPage({ params }: { params: { id: string } 
   });
 
   const initialValues = {
+    type: bill.type,
     unitId: bill.lease.unit.id,
     unitName: bill.lease.unit.name,
     periodLabel: bill.periodLabel,

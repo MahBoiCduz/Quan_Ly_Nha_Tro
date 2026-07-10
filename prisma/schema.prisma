@@ -11,6 +11,7 @@ datasource db {
 //   Unit.type:           "room" | "commercial"
 //   Unit.status:         "occupied" | "vacant"
 //   Lease.billingCycle:  "monthly" | "quarterly" | "custom"
+//   Bill.type:           "room" | "elec_water" | "both"
 //   Bill.status:         "unpaid" | "paid" | "overdue"
 //   Payment.method:      "cash" | "bank_transfer"
 //   User.role:           "admin"
@@ -117,6 +118,7 @@ model Bill {
   periodLabel       String
   dueDate           DateTime
   status            String     @default("unpaid")
+  type              String     @default("both")
   lineItems         Json
   electricityAmount Int        @default(0)
   waterAmount       Int        @default(0)

@@ -9,6 +9,7 @@ import { billGenerateSchema, billUpdateSchema } from "@/lib/bill-schema";
 
 export async function generateBill(formData: FormData) {
   const parsed = billGenerateSchema.safeParse({
+    type: formData.get("type") ?? undefined,
     unitId: formData.get("unitId"),
     periodLabel: formData.get("periodLabel"),
     dueDate: formData.get("dueDate"),
@@ -34,26 +35,29 @@ export async function generateBill(formData: FormData) {
   if (!lease) return { error: "Phòng chưa có hợp đồng đang hiệu lực" };
 
   // Totals are recomputed from the submitted quantity × unitPrice, never trusted.
-  const lineItems = normalizeLineItems(d.lineItems);
-  const subtotal = computeSubtotal(lineItems);
-  const electricityAmount = computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
-  const waterAmount = computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
+  // Gate computations on type: elec_water skips line items, room skips meters.
+  const lineItems = d.type === "elec_water" ? [] : normalizeLineItems(d.lineItems);
+  const subtotal = d.type === "elec_water" ? 0 : computeSubtotal(lineItems);
+  const electricityAmount = d.type === "room" ? 0 : computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
+  const waterAmount = d.type === "room" ? 0 : computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
   const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
 
   const bill = await db.bill.create({
     data: {
+      type: d.type,
       leaseId: lease.id,
       periodLabel: d.periodLabel,
       dueDate: new Date(d.dueDate),
       lineItems,
       electricityAmount,
       waterAmount,
-      electricityOld: d.electricityOld,
-      electricityNew: d.electricityNew,
-      electricityRate: d.electricityRate,
-      waterOld: d.waterOld,
-      waterNew: d.waterNew,
-      waterRate: d.waterRate,
+      // Store null for inapplicable readings so they don't appear as 0s.
+      electricityOld: d.type === "room" ? null : d.electricityOld,
+      electricityNew: d.type === "room" ? null : d.electricityNew,
+      electricityRate: d.type === "room" ? null : d.electricityRate,
+      waterOld: d.type === "room" ? null : d.waterOld,
+      waterNew: d.type === "room" ? null : d.waterNew,
+      waterRate: d.type === "room" ? null : d.waterRate,
       subtotal,
       grandTotal,
       status: "unpaid",
@@ -67,6 +71,7 @@ export async function generateBill(formData: FormData) {
 
 export async function updateBill(billId: string, formData: FormData) {
   const parsed = billUpdateSchema.safeParse({
+    type: formData.get("type") ?? undefined,
     unitId: formData.get("unitId"),
     periodLabel: formData.get("periodLabel"),
     dueDate: formData.get("dueDate"),
@@ -93,26 +98,29 @@ export async function updateBill(billId: string, formData: FormData) {
   if (bill.payments.length > 0) return { error: "Hóa đơn đã có thanh toán, không thể sửa" };
 
   // Totals are recomputed from the submitted data — never trusted.
-  const lineItems = normalizeLineItems(d.lineItems);
-  const subtotal = computeSubtotal(lineItems);
-  const electricityAmount = computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
-  const waterAmount = computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
+  // Gate computations on type: elec_water skips line items, room skips meters.
+  const lineItems = d.type === "elec_water" ? [] : normalizeLineItems(d.lineItems);
+  const subtotal = d.type === "elec_water" ? 0 : computeSubtotal(lineItems);
+  const electricityAmount = d.type === "room" ? 0 : computeMeterAmount(d.electricityOld, d.electricityNew, d.electricityRate);
+  const waterAmount = d.type === "room" ? 0 : computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
   const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
 
   await db.bill.update({
     where: { id: billId },
     data: {
+      type: d.type,
       periodLabel: d.periodLabel,
       dueDate: new Date(d.dueDate),
       lineItems,
       electricityAmount,
       waterAmount,
-      electricityOld: d.electricityOld,
-      electricityNew: d.electricityNew,
-      electricityRate: d.electricityRate,
-      waterOld: d.waterOld,
-      waterNew: d.waterNew,
-      waterRate: d.waterRate,
+      // Store null for inapplicable readings so they don't appear as 0s.
+      electricityOld: d.type === "room" ? null : d.electricityOld,
+      electricityNew: d.type === "room" ? null : d.electricityNew,
+      electricityRate: d.type === "room" ? null : d.electricityRate,
+      waterOld: d.type === "room" ? null : d.waterOld,
+      waterNew: d.type === "room" ? null : d.waterNew,
+      waterRate: d.type === "room" ? null : d.waterRate,
       subtotal,
       grandTotal,
       status: "unpaid",
