@@ -38,41 +38,33 @@ const billFieldsSchema = z.object({
   waterRate: z.number().int().min(0),
 });
 
-// Minimal type for the meter-reading fields that the refine callbacks access.
-type MeterReadings = {
-  electricityOld: number;
-  electricityNew: number;
-  waterOld: number;
-  waterNew: number;
-};
-
-// Shared meter-reading refinements used by both generate and update.
-function addMeterRefinements<T extends z.ZodTypeAny>(schema: T) {
-  return schema
-    // A meter only counts up: the new reading can't be below the old one
-    // (equal = no usage, which is allowed).
-    .refine((d: MeterReadings) => d.electricityNew >= d.electricityOld, {
-      message: "Số điện mới phải lớn hơn hoặc bằng số cũ",
-      path: ["electricityNew"],
-    })
-    .refine((d: MeterReadings) => d.waterNew >= d.waterOld, {
-      message: "Số nước mới phải lớn hơn hoặc bằng số cũ",
-      path: ["waterNew"],
-    });
-}
-
-// For creating a new bill: the due date can't be in the past.
-export const billGenerateSchema = addMeterRefinements(billFieldsSchema).refine(
-  (d) => d.dueDate >= vnToday(),
-  {
+// For creating a new bill: the due date can't be in the past, and meter
+// readings must count up (new >= old; equal = no usage is allowed).
+export const billGenerateSchema = billFieldsSchema
+  .refine((d) => d.electricityNew >= d.electricityOld, {
+    message: "Số điện mới phải lớn hơn hoặc bằng số cũ",
+    path: ["electricityNew"],
+  })
+  .refine((d) => d.waterNew >= d.waterOld, {
+    message: "Số nước mới phải lớn hơn hoặc bằng số cũ",
+    path: ["waterNew"],
+  })
+  .refine((d) => d.dueDate >= vnToday(), {
     message: "Hạn thanh toán phải từ hôm nay trở đi",
     path: ["dueDate"],
-  },
-);
+  });
 
 // For editing an existing bill: the due date may already be in the past,
 // so only the meter-reading checks apply.
-export const billUpdateSchema = addMeterRefinements(billFieldsSchema);
+export const billUpdateSchema = billFieldsSchema
+  .refine((d) => d.electricityNew >= d.electricityOld, {
+    message: "Số điện mới phải lớn hơn hoặc bằng số cũ",
+    path: ["electricityNew"],
+  })
+  .refine((d) => d.waterNew >= d.waterOld, {
+    message: "Số nước mới phải lớn hơn hoặc bằng số cũ",
+    path: ["waterNew"],
+  });
 
 export type BillGenerateInput = z.infer<typeof billGenerateSchema>;
 export type BillUpdateInput = z.infer<typeof billUpdateSchema>;
