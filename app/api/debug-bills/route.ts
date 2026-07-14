@@ -30,10 +30,10 @@ export async function GET() {
       totalBills: count,
       latest: rows,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     return NextResponse.json({
-      error: e.message,
-      stack: e.stack?.slice(0, 500),
+      error: msg,
       dbUrl: process.env.DATABASE_URL?.slice(0, 50) + "...",
     }, { status: 500 });
   }
