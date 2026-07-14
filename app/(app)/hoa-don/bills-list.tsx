@@ -31,6 +31,11 @@ const FILTERS: { key: Filter; label: string }[] = [
 const RANK: Record<Status, number> = { overdue: 0, unpaid: 1, paid: 2 };
 
 export function BillsList({ bills, initialStatus }: { bills: BillRow[]; initialStatus?: string }) {
+  console.log("[DEBUG BillsList] received bills:", bills.length, "initialStatus:", initialStatus);
+  if (bills.length > 0) {
+    console.log("[DEBUG BillsList] first bill:", bills[0]);
+    console.log("[DEBUG BillsList] last bill:", bills[bills.length - 1]);
+  }
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>(
     initialStatus === "overdue" || initialStatus === "unpaid" || initialStatus === "paid"

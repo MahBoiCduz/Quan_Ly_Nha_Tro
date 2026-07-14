@@ -28,6 +28,8 @@ export default async function BillsPage({ searchParams }: { searchParams: { stat
           <Plus size={18} /> Tạo hóa đơn
         </Link>
       </div>
+      {/* DEBUG: kiểm tra dữ liệu server-side */}
+      <p className="text-xs text-muted mb-2">[DEBUG] Server bills: {bills.length}, rows mapped: {rows.length}</p>
       <BillsList bills={rows} initialStatus={searchParams.status} />
     </div>
   );
