@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { formatVND, formatDate } from "@/lib/format";
 import { endLease } from "./lease-actions";
 import { useToast } from "@/components/toast";
@@ -21,6 +22,7 @@ type ActiveLease = {
 export function LeasePanel({
   unitId, activeLease,
 }: { unitId: string; activeLease: ActiveLease }) {
+  const router = useRouter();
   const toast = useToast();
 
   return (
@@ -46,6 +48,7 @@ export function LeasePanel({
       <form
         action={async (fd) => {
           await endLease(activeLease.id, unitId, String(fd.get("endDate")));
+          router.refresh();
           toast.success("Đã kết thúc hợp đồng");
         }}
         className="flex items-center gap-2 border-t border-line pt-3"

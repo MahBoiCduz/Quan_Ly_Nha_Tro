@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { formatVND } from "@/lib/format";
 import { addServiceItem, deleteServiceItem } from "./service-actions";
 import { useToast } from "@/components/toast";
@@ -8,16 +9,18 @@ import { Plus, Trash2 } from "lucide-react";
 type Item = { id: string; name: string; measureUnit: string; defaultPrice: number };
 
 export function ServiceEditor({ unitId, items }: { unitId: string; items: Item[] }) {
+  const router = useRouter();
   const toast = useToast();
 
   async function onAdd(formData: FormData) {
     const res = await addServiceItem(unitId, formData);
     if (res?.error) toast.error(res.error);
-    else toast.success("Đã thêm dịch vụ");
+    else { router.refresh(); toast.success("Đã thêm dịch vụ"); }
   }
 
   async function onDelete(id: string) {
     await deleteServiceItem(id, unitId);
+    router.refresh();
     toast.success("Đã xóa dịch vụ");
   }
 

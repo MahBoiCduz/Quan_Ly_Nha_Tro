@@ -49,6 +49,8 @@ export async function startLease(unitId: string, formData: FormData) {
   });
 
   revalidatePath(`/phong/${unitId}`);
+  revalidatePath("/phong");
+  revalidatePath("/");
   return { ok: true };
 }
 
@@ -58,5 +60,7 @@ export async function endLease(leaseId: string, unitId: string, endDate: string)
     db.unit.update({ where: { id: unitId }, data: { status: "vacant" } }),
   ]);
   revalidatePath(`/phong/${unitId}`);
+  revalidatePath("/phong");
+  revalidatePath("/");
   return { ok: true };
 }
