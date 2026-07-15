@@ -78,8 +78,22 @@ export default async function DashboardPage() {
     db.maintenanceSchedule.findMany({ select: { nextDueAt: true } }),
     db.payment.findMany({ where: { paidAt: { gte: since } }, select: { amount: true, paidAt: true } }),
   ]);
+
+  // DEBUG: log server-side để trace qua Vercel Logs
+  const byMonth: Record<string, number> = {};
+  for (const p of payments) {
+    const d = new Date(p.paidAt);
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    byMonth[k] = (byMonth[k] ?? 0) + p.amount;
+  }
+  console.log("[DASHBOARD-DEBUG]", "now:", now.toISOString(), "getMonth:", now.getMonth());
+  console.log("[DASHBOARD-DEBUG]", "since:", since.toISOString(), "getMonth:", since.getMonth());
+  console.log("[DASHBOARD-DEBUG]", "payments count:", payments.length);
+  console.log("[DASHBOARD-DEBUG]", "payments by month:", JSON.stringify(byMonth));
+
   const stats = computeDashboardStats({ units, bills, schedules }, now);
   const months = monthlyRevenue(payments, now);
+  console.log("[DASHBOARD-DEBUG]", "monthlyRevenue:", JSON.stringify(months.map(m => ({ key: m.key, total: m.total }))));
   const thisMonth = months[months.length - 1];
 
   return (
