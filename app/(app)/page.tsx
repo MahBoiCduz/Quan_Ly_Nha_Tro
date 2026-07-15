@@ -69,52 +69,23 @@ function MonthlyRevenue({ months }: { months: { key: string; label: string; tota
 export default async function DashboardPage() {
   const now = new Date();
   const since = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const [units, bills, schedules, payments] = await Promise.all([
+  const [units, bills, schedules, paymentRows] = await Promise.all([
     db.unit.findMany({ select: { status: true } }),
     db.bill.findMany({
       where: { status: { not: "paid" } },
       select: { grandTotal: true, dueDate: true, payments: { select: { amount: true } } },
     }),
     db.maintenanceSchedule.findMany({ select: { nextDueAt: true } }),
-    db.payment.findMany({ where: { paidAt: { gte: since } }, select: { amount: true, paidAt: true } }),
+    // Dùng raw SQL để bypass lỗi Prisma/libSQL date serialization trên Linux/Vercel
+    db.$queryRawUnsafe<{amount:number, paidAt:string}[]>(
+      `SELECT amount, paidAt FROM Payment WHERE paidAt >= '${since.toISOString()}'`
+    ),
   ]);
-
-  // DEBUG: log server-side để trace qua Vercel Logs
-  const byMonth: Record<string, number> = {};
-  for (const p of payments) {
-    const d = new Date(p.paidAt);
-    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    byMonth[k] = (byMonth[k] ?? 0) + p.amount;
-  }
-  console.log("[DASHBOARD-DEBUG]", "DB_URL:", (process.env.DATABASE_URL ?? "").substring(0, 50));
-  console.log("[DASHBOARD-DEBUG]", "now:", now.toISOString(), "getMonth:", now.getMonth());
-  console.log("[DASHBOARD-DEBUG]", "since:", since.toISOString(), "getMonth:", since.getMonth());
-  console.log("[DASHBOARD-DEBUG]", "payments count:", payments.length);
-  console.log("[DASHBOARD-DEBUG]", "payments by month:", JSON.stringify(byMonth));
-  // Log raw paidAt of first 3 and last 3 payments
-  if (payments.length > 0) {
-    const sample = payments.slice(0, 3).map(p => ({ amt: p.amount, raw: (p.paidAt as Date).toISOString(), month: (p.paidAt as Date).getMonth() }));
-    const tail = payments.slice(-3).map(p => ({ amt: p.amount, raw: (p.paidAt as Date).toISOString(), month: (p.paidAt as Date).getMonth() }));
-    console.log("[DASHBOARD-DEBUG]", "first 3:", JSON.stringify(sample));
-    console.log("[DASHBOARD-DEBUG]", "last 3:", JSON.stringify(tail));
-  }
-
-  // DEBUG: raw SQL bypass Prisma để so sánh
-  const rawCount = await db.$queryRawUnsafe<{cnt:bigint}[]>("SELECT COUNT(*) as cnt FROM Payment");
-  console.log("[DASHBOARD-DEBUG]", "raw total payments:", Number(rawCount[0]?.cnt ?? 0));
-  const rawJune = await db.$queryRawUnsafe<{cnt:bigint,total:number}[]>(
-    "SELECT COUNT(*) as cnt, SUM(amount) as total FROM Payment WHERE paidAt >= '2026-06-01' AND paidAt < '2026-07-01'"
-  );
-  console.log("[DASHBOARD-DEBUG]", "raw june (SQL):", JSON.stringify({ cnt: Number(rawJune[0]?.cnt ?? 0), total: rawJune[0]?.total ?? 0 }));
-  const rawPrismaJune = await db.payment.findMany({
-    where: { paidAt: { gte: new Date("2026-06-01"), lt: new Date("2026-07-01") } },
-    select: { id: true, amount: true, paidAt: true }
-  });
-  console.log("[DASHBOARD-DEBUG]", "prisma june count:", rawPrismaJune.length, "ids:", JSON.stringify(rawPrismaJune.map(p => p.id)));
+  // Convert string paidAt từ raw SQL sang Date object cho monthlyRevenue()
+  const payments = paymentRows.map((r) => ({ amount: r.amount, paidAt: new Date(r.paidAt) }));
 
   const stats = computeDashboardStats({ units, bills, schedules }, now);
   const months = monthlyRevenue(payments, now);
-  console.log("[DASHBOARD-DEBUG]", "monthlyRevenue:", JSON.stringify(months.map(m => ({ key: m.key, total: m.total }))));
   const thisMonth = months[months.length - 1];
 
   return (
