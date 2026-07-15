@@ -99,6 +99,19 @@ export default async function DashboardPage() {
     console.log("[DASHBOARD-DEBUG]", "last 3:", JSON.stringify(tail));
   }
 
+  // DEBUG: raw SQL bypass Prisma để so sánh
+  const rawCount = await db.$queryRawUnsafe<{cnt:bigint}[]>("SELECT COUNT(*) as cnt FROM Payment");
+  console.log("[DASHBOARD-DEBUG]", "raw total payments:", Number(rawCount[0]?.cnt ?? 0));
+  const rawJune = await db.$queryRawUnsafe<{cnt:bigint,total:number}[]>(
+    "SELECT COUNT(*) as cnt, SUM(amount) as total FROM Payment WHERE paidAt >= '2026-06-01' AND paidAt < '2026-07-01'"
+  );
+  console.log("[DASHBOARD-DEBUG]", "raw june (SQL):", JSON.stringify({ cnt: Number(rawJune[0]?.cnt ?? 0), total: rawJune[0]?.total ?? 0 }));
+  const rawPrismaJune = await db.payment.findMany({
+    where: { paidAt: { gte: new Date("2026-06-01"), lt: new Date("2026-07-01") } },
+    select: { id: true, amount: true, paidAt: true }
+  });
+  console.log("[DASHBOARD-DEBUG]", "prisma june count:", rawPrismaJune.length, "ids:", JSON.stringify(rawPrismaJune.map(p => p.id)));
+
   const stats = computeDashboardStats({ units, bills, schedules }, now);
   const months = monthlyRevenue(payments, now);
   console.log("[DASHBOARD-DEBUG]", "monthlyRevenue:", JSON.stringify(months.map(m => ({ key: m.key, total: m.total }))));
