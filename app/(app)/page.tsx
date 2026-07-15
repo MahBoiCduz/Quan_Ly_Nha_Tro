@@ -86,10 +86,18 @@ export default async function DashboardPage() {
     const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     byMonth[k] = (byMonth[k] ?? 0) + p.amount;
   }
+  console.log("[DASHBOARD-DEBUG]", "DB_URL:", (process.env.DATABASE_URL ?? "").substring(0, 50));
   console.log("[DASHBOARD-DEBUG]", "now:", now.toISOString(), "getMonth:", now.getMonth());
   console.log("[DASHBOARD-DEBUG]", "since:", since.toISOString(), "getMonth:", since.getMonth());
   console.log("[DASHBOARD-DEBUG]", "payments count:", payments.length);
   console.log("[DASHBOARD-DEBUG]", "payments by month:", JSON.stringify(byMonth));
+  // Log raw paidAt of first 3 and last 3 payments
+  if (payments.length > 0) {
+    const sample = payments.slice(0, 3).map(p => ({ amt: p.amount, raw: (p.paidAt as Date).toISOString(), month: (p.paidAt as Date).getMonth() }));
+    const tail = payments.slice(-3).map(p => ({ amt: p.amount, raw: (p.paidAt as Date).toISOString(), month: (p.paidAt as Date).getMonth() }));
+    console.log("[DASHBOARD-DEBUG]", "first 3:", JSON.stringify(sample));
+    console.log("[DASHBOARD-DEBUG]", "last 3:", JSON.stringify(tail));
+  }
 
   const stats = computeDashboardStats({ units, bills, schedules }, now);
   const months = monthlyRevenue(payments, now);
