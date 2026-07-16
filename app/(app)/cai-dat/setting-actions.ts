@@ -79,11 +79,20 @@ export async function deleteBillingProfile(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
+const assignmentSchema = z.array(
+  z.object({
+    unitId: z.string().min(1),
+    profileId: z.string().nullable(),
+  }),
+);
+
 export async function saveRoomAssignments(
-  assignments: { unitId: string; profileId: string | null }[],
+  assignments: unknown,
 ): Promise<ActionResult> {
+  const parsed = assignmentSchema.safeParse(assignments);
+  if (!parsed.success) return { error: "Dữ liệu phân công không hợp lệ" };
   await db.$transaction(
-    assignments.map((a) =>
+    parsed.data.map((a) =>
       db.unit.update({ where: { id: a.unitId }, data: { billingProfileId: a.profileId } }),
     ),
   );
@@ -115,6 +124,10 @@ export async function qrDataUrl(qrImageUrl: string | null): Promise<string | nul
   // Remote upload (Vercel Blob on prod) — fetch it and inline as a data URL.
   // The serverless filesystem has no copy of the file, so readFile would fail.
   if (/^https?:\/\//i.test(qrImageUrl)) {
+    // Only allow known blob storage hosts and the app's own domain to prevent SSRF.
+    const url = new URL(qrImageUrl);
+    const allowed = /\.(?:blob\.vercel-storage\.com|vercel\.app)$/i;
+    if (!allowed.test(url.hostname)) return null;
     try {
       const res = await fetch(qrImageUrl);
       if (!res.ok) return null;

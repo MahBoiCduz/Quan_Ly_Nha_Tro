@@ -21,8 +21,11 @@ export async function createExpense(formData: FormData) {
   return { ok: true };
 }
 
-export async function deleteExpense(id: string): Promise<void> {
+export async function deleteExpense(id: string): Promise<{ ok?: true; error?: string }> {
+  const existing = await db.expense.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) return { error: "Không tìm thấy khoản chi" };
   await db.expense.delete({ where: { id } });
   revalidatePath("/chi-tieu");
   revalidatePath("/so-sach");
+  return { ok: true };
 }

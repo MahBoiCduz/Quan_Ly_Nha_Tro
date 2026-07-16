@@ -5,5 +5,6 @@ export function formatVND(amount: number): string {
 
 export function formatDate(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }

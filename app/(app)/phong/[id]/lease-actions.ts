@@ -55,8 +55,12 @@ export async function startLease(unitId: string, formData: FormData) {
 }
 
 export async function endLease(leaseId: string, unitId: string, endDate: string) {
+  const lease = await db.lease.findUnique({ where: { id: leaseId }, select: { startDate: true } });
+  if (!lease) return { error: "Không tìm thấy hợp đồng" };
+  const end = new Date(endDate);
+  if (end <= lease.startDate) return { error: "Ngày kết thúc phải sau ngày bắt đầu" };
   await db.$transaction([
-    db.lease.update({ where: { id: leaseId }, data: { endDate: new Date(endDate) } }),
+    db.lease.update({ where: { id: leaseId }, data: { endDate: end } }),
     db.unit.update({ where: { id: unitId }, data: { status: "vacant" } }),
   ]);
   revalidatePath(`/phong/${unitId}`);

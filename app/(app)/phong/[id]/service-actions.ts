@@ -17,6 +17,9 @@ export async function addServiceItem(unitId: string, formData: FormData) {
 }
 
 export async function deleteServiceItem(id: string, unitId: string) {
+  const item = await db.serviceItem.findUnique({ where: { id }, select: { unitId: true } });
+  if (!item) return { error: "Không tìm thấy dịch vụ" };
+  if (item.unitId !== unitId) return { error: "Dịch vụ không thuộc phòng này" };
   await db.serviceItem.delete({ where: { id } });
   revalidatePath(`/phong/${unitId}`);
   return { ok: true };

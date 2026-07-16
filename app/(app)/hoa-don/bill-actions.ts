@@ -66,6 +66,9 @@ export async function generateBill(formData: FormData) {
   });
 
   revalidatePath("/hoa-don");
+  revalidatePath("/so-sach");
+  revalidatePath(`/phong/${unit.id}`);
+  revalidatePath("/");
   redirect(`/hoa-don/${bill.id}`);
 }
 
@@ -141,6 +144,7 @@ export async function deleteBill(id: string) {
     include: { lease: { select: { unitId: true } } },
   });
   if (!bill) return { error: "Không tìm thấy hóa đơn" };
+  if (bill.status === "paid") return { error: "Hóa đơn đã thanh toán, không thể xóa" };
   // Delete the bill's payments first (no cascade on the relation), then the bill.
   await db.$transaction([
     db.payment.deleteMany({ where: { billId: id } }),

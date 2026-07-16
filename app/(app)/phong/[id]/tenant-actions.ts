@@ -38,6 +38,9 @@ export async function addCoTenant(leaseId: string, unitId: string, formData: For
 }
 
 export async function removeCoTenant(tenantId: string, unitId: string): Promise<ActionResult> {
+  const tenant = await db.tenant.findUnique({ where: { id: tenantId }, select: { coLeaseId: true } });
+  if (!tenant) return { error: "Không tìm thấy người thuê" };
+  if (!tenant.coLeaseId) return { error: "Đây là người thuê chính, không thể xóa bằng chức năng này" };
   // Co-tenants have no bills of their own, so a plain delete is safe.
   await db.tenant.delete({ where: { id: tenantId } });
   revalidatePath(`/phong/${unitId}`);

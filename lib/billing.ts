@@ -59,6 +59,12 @@ export function computeMeterAmount(oldReading: number, newReading: number, rate:
   return Math.max(0, Math.round((newReading - oldReading) * rate));
 }
 
+/** Compare two Dates using only the Vietnam date (yyyy-mm-dd), so the result is
+ *  consistent regardless of whether the server runs in UTC or ICT. */
+function vnDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(d);
+}
+
 export function billStatusFor(
   grandTotal: number,
   totalPaid: number,
@@ -66,6 +72,6 @@ export function billStatusFor(
   now: Date = new Date(),
 ): "paid" | "overdue" | "unpaid" {
   if (totalPaid >= grandTotal) return "paid";
-  if (now > dueDate) return "overdue";
+  if (vnDate(now) >= vnDate(dueDate)) return "overdue";
   return "unpaid";
 }
