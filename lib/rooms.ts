@@ -12,9 +12,12 @@ export function getActiveLease<T extends { startDate: Date; endDate: Date | null
   leases: T[],
   on: Date = new Date(),
 ): T | null {
-  return (
-    leases.find((l) => l.startDate <= on && (l.endDate === null || l.endDate >= on)) ?? null
+  const active = leases.filter(
+    (l) => l.startDate <= on && (l.endDate === null || l.endDate >= on),
   );
+  if (active.length === 0) return null;
+  // Return the lease with the latest startDate (most recent active lease)
+  return active.reduce((a, b) => (b.startDate.getTime() > a.startDate.getTime() ? b : a));
 }
 
 /**

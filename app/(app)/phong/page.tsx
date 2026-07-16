@@ -3,10 +3,12 @@ import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import { groupUnitsByFloor, getActiveLease } from "@/lib/rooms";
 
+export const dynamic = "force-dynamic";
+
 export default async function RoomsPage() {
   const units = await db.unit.findMany({
     orderBy: [{ floor: "asc" }, { name: "asc" }],
-    include: { leases: { include: { tenant: true } } },
+    include: { leases: { orderBy: { startDate: "desc" }, include: { tenant: true } } },
   });
   const byFloor = groupUnitsByFloor(units);
 
