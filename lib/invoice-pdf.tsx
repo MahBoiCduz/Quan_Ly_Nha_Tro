@@ -108,12 +108,21 @@ const s = StyleSheet.create({
   cQty: { width: "10%", textAlign: "center" },
   cPrice: { width: "16%", textAlign: "right" },
   cTotal: { width: "18%", textAlign: "right", borderRightWidth: 0 },
+  // Meter-table columns (7): readings are their own columns (tháng trước / tháng sau).
+  mName: { width: "22%" },
+  mUnit: { width: "10%", textAlign: "center" },
+  mOld: { width: "12%", textAlign: "center" },
+  mNew: { width: "12%", textAlign: "center" },
+  mQty: { width: "12%", textAlign: "center" },
+  mPrice: { width: "14%", textAlign: "right" },
+  mTotal: { width: "18%", textAlign: "right", borderRightWidth: 0 },
   notes: { marginTop: 10 },
   bank: { marginTop: 10, color: "#b00000" },
   qr: { width: 120, height: 120, marginTop: 8 },
 });
 
-// A metered service row (điện / nước): số lượng = chênh lệch chỉ số, đơn giá, thành tiền.
+// A metered service row (điện / nước) in the 7-column meter table:
+// chỉ số tháng trước / tháng sau are separate columns, số tiêu thụ = mới − cũ.
 function MeterRow({
   label, unit, oldR, newR, usage, rate, amount,
 }: {
@@ -123,14 +132,13 @@ function MeterRow({
 }) {
   return (
     <View style={s.row}>
-      <Text style={[s.cell, s.cTT]}> </Text>
-      <Text style={[s.cell, s.cName]}>
-        {label}{oldR != null ? ` (${oldR} → ${newR})` : ""}
-      </Text>
-      <Text style={[s.cell, s.cUnit]}>{unit}</Text>
-      <Text style={[s.cell, s.cQty]}>{usage ?? " "}</Text>
-      <Text style={[s.cell, s.cPrice]}>{usage != null ? formatVND(rate) : " "}</Text>
-      <Text style={[s.cell, s.cTotal]}>{formatVND(amount)}</Text>
+      <Text style={[s.cell, s.mName]}>{label}</Text>
+      <Text style={[s.cell, s.mUnit]}>{unit}</Text>
+      <Text style={[s.cell, s.mOld]}>{oldR ?? " "}</Text>
+      <Text style={[s.cell, s.mNew]}>{newR ?? " "}</Text>
+      <Text style={[s.cell, s.mQty]}>{usage ?? " "}</Text>
+      <Text style={[s.cell, s.mPrice]}>{usage != null ? formatVND(rate) : " "}</Text>
+      <Text style={[s.cell, s.mTotal]}>{formatVND(amount)}</Text>
     </View>
   );
 }
@@ -145,54 +153,64 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
           Người thuê: {model.tenantName} (ĐT: {model.phone})
         </Text>
 
-        <View style={s.table}>
-          {/* Header row */}
-          <View style={s.row}>
-            <Text style={[s.cell, s.cTT]}>TT</Text>
-            <Text style={[s.cell, s.cName]}>Các dịch vụ</Text>
-            <Text style={[s.cell, s.cUnit]}>Đơn vị tính</Text>
-            <Text style={[s.cell, s.cQty]}>Số lượng</Text>
-            <Text style={[s.cell, s.cPrice]}>Đơn giá</Text>
-            <Text style={[s.cell, s.cTotal]}>Thành tiền</Text>
-          </View>
-          {/* Line item rows — hidden for elec_water bills */}
-          {model.type !== "elec_water" && (
-            <>
-              {model.rows.map((r, i) => (
-                <View style={s.row} key={i}>
-                  <Text style={[s.cell, s.cTT]}>{i + 1}</Text>
-                  <Text style={[s.cell, s.cName]}>{r.name}</Text>
-                  <Text style={[s.cell, s.cUnit]}>{r.measureUnit}</Text>
-                  <Text style={[s.cell, s.cQty]}>{r.quantity}</Text>
-                  <Text style={[s.cell, s.cPrice]}>{formatVND(r.unitPrice)}</Text>
-                  <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
-                </View>
-              ))}
-              {/* Subtotal: room + services, excluding electricity & water */}
-              <View style={s.row}>
-                <Text style={[s.cell, { width: "82%" }]}>
-                  Tổng tiền nhà và DV (trừ điện, nước)
-                </Text>
-                <Text style={[s.cell, s.cTotal]}>{formatVND(model.subtotal)}</Text>
+        {/* Service table — 6 columns, hidden for elec_water bills */}
+        {model.type !== "elec_water" && (
+          <View style={s.table}>
+            <View style={s.row}>
+              <Text style={[s.cell, s.cTT]}>TT</Text>
+              <Text style={[s.cell, s.cName]}>Các dịch vụ</Text>
+              <Text style={[s.cell, s.cUnit]}>Đơn vị tính</Text>
+              <Text style={[s.cell, s.cQty]}>Số lượng</Text>
+              <Text style={[s.cell, s.cPrice]}>Đơn giá</Text>
+              <Text style={[s.cell, s.cTotal]}>Thành tiền</Text>
+            </View>
+            {model.rows.map((r, i) => (
+              <View style={s.row} key={i}>
+                <Text style={[s.cell, s.cTT]}>{i + 1}</Text>
+                <Text style={[s.cell, s.cName]}>{r.name}</Text>
+                <Text style={[s.cell, s.cUnit]}>{r.measureUnit}</Text>
+                <Text style={[s.cell, s.cQty]}>{r.quantity}</Text>
+                <Text style={[s.cell, s.cPrice]}>{formatVND(r.unitPrice)}</Text>
+                <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
               </View>
-            </>
-          )}
-          {/* Meter rows — hidden for room bills */}
-          {model.type !== "room" && (
-            <>
-              <MeterRow
-                label="Tiền điện" unit="kWh"
-                oldR={model.electricityOld} newR={model.electricityNew}
-                usage={model.electricityUsage} rate={model.electricityRate} amount={model.electricityAmount}
-              />
-              <MeterRow
-                label="Tiền nước" unit="m³"
-                oldR={model.waterOld} newR={model.waterNew}
-                usage={model.waterUsage} rate={model.waterRate} amount={model.waterAmount}
-              />
-            </>
-          )}
-          {/* Grand total */}
+            ))}
+            {/* Subtotal: room + services, excluding electricity & water */}
+            <View style={s.row}>
+              <Text style={[s.cell, { width: "82%" }]}>
+                Tổng tiền nhà và DV (trừ điện, nước)
+              </Text>
+              <Text style={[s.cell, s.cTotal]}>{formatVND(model.subtotal)}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Meter table — 7 columns, hidden for room bills */}
+        {model.type !== "room" && (
+          <View style={s.table}>
+            <View style={s.row}>
+              <Text style={[s.cell, s.mName]}>Hạng mục</Text>
+              <Text style={[s.cell, s.mUnit]}>Đơn vị tính</Text>
+              <Text style={[s.cell, s.mOld]}>Số tháng trước</Text>
+              <Text style={[s.cell, s.mNew]}>Số tháng sau</Text>
+              <Text style={[s.cell, s.mQty]}>Số tiêu thụ</Text>
+              <Text style={[s.cell, s.mPrice]}>Đơn giá</Text>
+              <Text style={[s.cell, s.mTotal]}>Thành tiền</Text>
+            </View>
+            <MeterRow
+              label="Tiền điện" unit="kWh"
+              oldR={model.electricityOld} newR={model.electricityNew}
+              usage={model.electricityUsage} rate={model.electricityRate} amount={model.electricityAmount}
+            />
+            <MeterRow
+              label="Tiền nước" unit="m³"
+              oldR={model.waterOld} newR={model.waterNew}
+              usage={model.waterUsage} rate={model.waterRate} amount={model.waterAmount}
+            />
+          </View>
+        )}
+
+        {/* Grand total */}
+        <View style={s.table}>
           <View style={s.row}>
             <Text style={[s.cell, { width: "82%", fontWeight: "bold" }]}>Tổng cộng</Text>
             <Text style={[s.cell, s.cTotal, { fontWeight: "bold" }]}>{formatVND(model.grandTotal)}</Text>
