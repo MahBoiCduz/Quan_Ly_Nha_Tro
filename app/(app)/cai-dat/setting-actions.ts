@@ -102,7 +102,6 @@ export async function saveRoomAssignments(
 
 export async function saveSettings(formData: FormData) {
   const parsed = settingSchema.safeParse({
-    adminZaloUserId: formData.get("adminZaloUserId"),
     defaultElectricityRate: formData.get("defaultElectricityRate"),
     defaultWaterRate: formData.get("defaultWaterRate"),
   });

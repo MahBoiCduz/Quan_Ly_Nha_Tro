@@ -27,7 +27,7 @@ After any schema or server-action change, restart the dev server (Next.js HMR do
 
 **Force-dynamic:** `app/(app)/layout.tsx` sets `export const dynamic = "force-dynamic"` because Prisma can't statically prerender — at build time no database is available and it would crash on "no such table."
 
-**Auth:** NextAuth v5 middleware protects everything except `/login`, `/api/auth`, and `/api/cron`. Login uses a credentials provider with bcrypt-hashed passwords stored in the `User` table. All users have role `"admin"`.
+**Auth:** NextAuth v5 middleware protects everything except `/login` and `/api/auth`. Login uses a credentials provider with bcrypt-hashed passwords stored in the `User` table. All users have role `"admin"`.
 
 ### Bill architecture
 
@@ -44,7 +44,7 @@ Bills are the core domain object. Key design decisions:
 ### BillingProfile & Setting
 
 - **BillingProfile** stores bank account + QR code details for invoices. Each room can have its own profile (`Unit.billingProfileId`). Exactly one row has `isDefault = true` — the fallback when neither the bill nor the room specifies one.
-- **Setting** is a singleton config row (`id = 'singleton'`). It only holds `adminZaloUserId`, `defaultElectricityRate`, and `defaultWaterRate`. Bank/QR fields were consolidated into `BillingProfile` (migration `20260702000000`).
+- **Setting** is a singleton config row (`id = 'singleton'`). It only holds `defaultElectricityRate` and `defaultWaterRate`. Bank/QR fields were consolidated into `BillingProfile` (migration `20260702000000`).
 
 ### Payment receipt images
 

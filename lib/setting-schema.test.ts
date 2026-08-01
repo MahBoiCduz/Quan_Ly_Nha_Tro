@@ -6,13 +6,11 @@ describe("settingSchema", () => {
     expect(settingSchema.safeParse({}).success).toBe(true);
   });
   it("keeps provided values and coerces rate strings to ints", () => {
-    const r = settingSchema.parse({ adminZaloUserId: "zalo-1", defaultElectricityRate: "4000" });
-    expect(r.adminZaloUserId).toBe("zalo-1");
+    const r = settingSchema.parse({ defaultElectricityRate: "4000" });
     expect(r.defaultElectricityRate).toBe(4000);
   });
   it("coerces empty strings to undefined", () => {
-    const r = settingSchema.parse({ adminZaloUserId: "", defaultWaterRate: "" });
-    expect(r.adminZaloUserId).toBeUndefined();
+    const r = settingSchema.parse({ defaultWaterRate: "" });
     expect(r.defaultWaterRate).toBeUndefined();
   });
 });

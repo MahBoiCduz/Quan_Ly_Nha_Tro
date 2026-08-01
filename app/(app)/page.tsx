@@ -2,7 +2,6 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatVND } from "@/lib/format";
 import { computeDashboardStats, monthlyRevenue } from "@/lib/dashboard";
-import { NotifyButton } from "./notify-button";
 import { Receipt, UserPlus, Wallet } from "lucide-react";
 
 // Live figures (this-month revenue, overdue counts) must reflect the current
@@ -125,8 +124,6 @@ export default async function DashboardPage() {
           Thêm chi tiêu
         </Link>
       </div>
-
-      <NotifyButton />
     </div>
   );
 }

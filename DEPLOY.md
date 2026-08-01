@@ -4,7 +4,6 @@ App này (Next.js 14 + Prisma 7) đã được chỉnh để chạy serverless t
 
 - **DB:** Turso (libSQL — SQLite trên cloud). Local vẫn dùng file `dev.db`.
 - **Ảnh CCCD:** Vercel Blob (khi deploy) / thư mục `uploads/` (khi local).
-- **Nhắc Zalo:** Vercel Cron gọi `/api/cron/notify` mỗi sáng.
 
 ---
 
@@ -52,8 +51,6 @@ npm run db:seed                      # tạo admin + 16 phòng
 | `DATABASE_URL` | `libsql://nhatro-xxx.turso.io` (bước 2) |
 | `DATABASE_AUTH_TOKEN` | token Turso (bước 2) |
 | `AUTH_SECRET` | chuỗi ngẫu nhiên: `openssl rand -base64 32` |
-| `ZALO_OA_ACCESS_TOKEN` | token Zalo OA |
-| `CRON_SECRET` | chuỗi ngẫu nhiên dài bất kỳ |
 
 `BLOB_READ_WRITE_TOKEN` đã được thêm tự động ở bước 3.
 
@@ -76,13 +73,6 @@ node scripts/set-admin-password.mjs admin@nhatro.local 'Locvung@666'
 ```
 
 Local (file `dev.db`) thì bỏ qua 2 biến trên. Tham số: `<email> <mật khẩu mới>`.
-
-## 6. Cron Zalo
-
-`vercel.json` đã khai báo lịch chạy `0 1 * * *` (UTC) = **8h sáng giờ VN**, mỗi ngày.
-Vercel Cron tự gửi header `Authorization: Bearer <CRON_SECRET>` nên không cần cấu hình thêm.
-
-> Lưu ý gói **Hobby (free)**: cron tối đa 1 lần/ngày — vừa đủ cho nhắc tiền trọ.
 
 ---
 

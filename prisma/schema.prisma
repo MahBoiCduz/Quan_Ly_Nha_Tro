@@ -216,12 +216,6 @@ model User {
 // BillingProfile{isDefault} row (see migration 20260702000000).
 model Setting {
   id                     String  @id @default("singleton")
-  adminZaloUserId        String?
   defaultElectricityRate Int?
   defaultWaterRate       Int?
-}
-
-model NotificationLog {
-  key    String   @id
-  sentAt DateTime @default(now())
 }
