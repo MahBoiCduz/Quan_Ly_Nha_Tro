@@ -9,12 +9,15 @@ export function normalize(s: string): string {
 }
 
 function tokenMatches(hay: string, token: string): boolean {
-  // Numeric / date tokens ("6", "01/2026") must sit at a number boundary so
-  // "tháng 1" doesn't match the "1" inside "301", yet "01/2026" still matches
-  // inside "31/01/2026". Text tokens match as a plain substring (flexible names).
+  // Numeric / date tokens ("6", "01/2026") must sit between two number
+  // boundaries. The trailing boundary is what keeps "202" from matching the
+  // "202" inside the year "2026" — without it, searching a room like "202" on
+  // the bill screen matched every bill with a "…/2026" period, so the list
+  // never narrowed. "01/2026" still matches inside "31/01/2026". Text tokens
+  // match as a plain substring (flexible names).
   if (/^[0-9/]+$/.test(token)) {
     const esc = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(?:^|[^0-9])${esc}`).test(hay);
+    return new RegExp(`(?:^|[^0-9])${esc}(?:$|[^0-9])`).test(hay);
   }
   return hay.includes(token);
 }

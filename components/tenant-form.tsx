@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { IdCardUploader } from "@/components/id-card-uploader";
@@ -21,6 +22,7 @@ export function TenantForm({
 }) {
   const [front, setFront] = useState(tenant?.idCardFrontImageUrl ?? "");
   const [back, setBack] = useState(tenant?.idCardBackImageUrl ?? "");
+  const router = useRouter();
   const toast = useToast();
 
   async function onSubmit(formData: FormData) {
@@ -28,7 +30,12 @@ export function TenantForm({
     formData.set("idCardBackImageUrl", back);
     const res = await action(formData);
     if (res?.error) toast.error(res.error);
-    else onSuccess?.();
+    else {
+      onSuccess?.();
+      // Refresh the room page so the read view shows the just-saved tenant data
+      // (updateTenant / addCoTenant only invalidate the server cache).
+      router.refresh();
+    }
   }
 
   return (

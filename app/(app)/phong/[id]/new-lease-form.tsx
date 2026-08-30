@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { IdCardUploader } from "@/components/id-card-uploader";
 import { startLease } from "./lease-actions";
 
 export function NewLeaseForm({ unitId }: { unitId: string }) {
+  const router = useRouter();
   const toast = useToast();
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
@@ -15,7 +17,12 @@ export function NewLeaseForm({ unitId }: { unitId: string }) {
     formData.set("idCardBackImageUrl", back);
     const res = await startLease(unitId, formData);
     if (res?.error) toast.error(res.error);
-    else toast.success("Đã tạo khách thuê và hợp đồng");
+    else {
+      // Re-render the room page so the "Khách thuê mới" form is replaced by the
+      // tenant info + active lease panel (startLease only invalidates the cache).
+      router.refresh();
+      toast.success("Đã tạo khách thuê và hợp đồng");
+    }
   }
 
   return (

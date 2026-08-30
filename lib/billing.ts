@@ -75,3 +75,16 @@ export function billStatusFor(
   if (vnDate(now) >= vnDate(dueDate)) return "overdue";
   return "unpaid";
 }
+
+// Vietnamese labels for a bill's `type` column, shown as a badge in the bill
+// lists so electricity/water bills ("Điện nước") are distinguishable from
+// room-only ("Tiền phòng") and combined ("Phòng + Điện nước") bills.
+const BILL_TYPE_LABEL: Record<string, string> = {
+  room: "Tiền phòng",
+  elec_water: "Điện nước",
+  both: "Phòng + Điện nước",
+};
+
+export function billTypeLabel(type: string): string {
+  return BILL_TYPE_LABEL[type] ?? "Hóa đơn";
+}

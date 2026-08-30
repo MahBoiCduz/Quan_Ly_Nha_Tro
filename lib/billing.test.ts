@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  lineTotal, buildDefaultLineItems, normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount, billStatusFor,
+  lineTotal, buildDefaultLineItems, normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount, billStatusFor, billTypeLabel,
 } from "@/lib/billing";
 
 describe("lineTotal", () => {
@@ -66,6 +66,17 @@ describe("computeMeterAmount", () => {
   });
   it("never goes negative on a meter reset", () => {
     expect(computeMeterAmount(1588, 0, 4000)).toBe(0);
+  });
+});
+
+describe("billTypeLabel", () => {
+  it("labels the three bill types", () => {
+    expect(billTypeLabel("room")).toBe("Tiền phòng");
+    expect(billTypeLabel("elec_water")).toBe("Điện nước");
+    expect(billTypeLabel("both")).toBe("Phòng + Điện nước");
+  });
+  it("falls back for an unknown type", () => {
+    expect(billTypeLabel("whatever")).toBe("Hóa đơn");
   });
 });
 

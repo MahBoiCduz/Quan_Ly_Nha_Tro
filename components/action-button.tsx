@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "./toast";
 
@@ -25,6 +26,7 @@ export function ActionButton({
   children: React.ReactNode;
 }) {
   const toast = useToast();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   async function run() {
@@ -33,7 +35,12 @@ export function ActionButton({
     try {
       const res = await action();
       if (res && "error" in res && res.error) toast.error(res.error);
-      else toast.success(success);
+      else {
+        toast.success(success);
+        // The server action revalidates the cache; refresh the page so the UI
+        // reflects the change (e.g. a deleted row disappears) without a manual reload.
+        router.refresh();
+      }
     } catch {
       toast.error("Có lỗi xảy ra, vui lòng thử lại.");
     } finally {

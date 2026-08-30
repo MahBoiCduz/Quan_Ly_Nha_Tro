@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { formatVND } from "@/lib/format";
-import { billStatusFor } from "@/lib/billing";
+import { billStatusFor, billTypeLabel } from "@/lib/billing";
 import { matchesQuery } from "@/lib/search";
 import { SearchBox } from "@/components/search-box";
 
@@ -12,6 +12,7 @@ type BillRow = {
   unitName: string;
   periodLabel: string;
   tenantName: string;
+  type: string;
   grandTotal: number;
   dueDate: Date;
   totalPaid: number;
@@ -53,7 +54,7 @@ export function BillsList({ bills, initialStatus }: { bills: BillRow[]; initialS
       ranked.filter(
         (b) =>
           (filter === "all" || b.status === filter) &&
-          matchesQuery(`${b.unitName} ${b.periodLabel} ${b.tenantName}`, q),
+          matchesQuery(`${b.unitName} ${b.periodLabel} ${b.tenantName} ${billTypeLabel(b.type)}`, q),
       ),
     [ranked, filter, q],
   );
@@ -87,8 +88,11 @@ export function BillsList({ bills, initialStatus }: { bills: BillRow[]; initialS
                 href={`/hoa-don/${b.id}`}
                 className="flex flex-col gap-1.5 px-4 py-3 text-[15px] hover:bg-cream sm:flex-row sm:items-center sm:justify-between sm:gap-3"
               >
-                <span className="min-w-0 text-ink">
-                  {b.unitName} · {b.periodLabel} · {b.tenantName}
+                <span className="flex min-w-0 items-center gap-2 text-ink">
+                  <span className="badge-muted shrink-0">{billTypeLabel(b.type)}</span>
+                  <span className="truncate">
+                    {b.unitName} · {b.periodLabel} · {b.tenantName}
+                  </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
                   <span className="text-ink">{formatVND(b.grandTotal)}</span>

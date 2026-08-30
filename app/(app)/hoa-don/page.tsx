@@ -16,6 +16,7 @@ export default async function BillsPage({ searchParams }: { searchParams: { stat
     unitName: b.lease.unit.name,
     periodLabel: b.periodLabel,
     tenantName: b.lease.tenant.fullName,
+    type: b.type,
     grandTotal: b.grandTotal,
     dueDate: b.dueDate,
     totalPaid: b.payments.reduce((s, p) => s + p.amount, 0),
