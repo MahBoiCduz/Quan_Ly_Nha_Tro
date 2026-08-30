@@ -3,6 +3,8 @@ import { BackLink } from "@/components/back-link";
 import { getActiveLease } from "@/lib/rooms";
 import { GenerateForm } from "../generate-form";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULT_ELECTRICITY_RATE = 4000;
 const DEFAULT_WATER_RATE = 35000;
 

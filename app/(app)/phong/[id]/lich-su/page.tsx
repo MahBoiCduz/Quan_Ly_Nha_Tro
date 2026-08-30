@@ -5,6 +5,8 @@ import { formatVND, formatDate } from "@/lib/format";
 import { BackLink } from "@/components/back-link";
 import { LeaseBillsList } from "../lease-bills-list";
 
+export const dynamic = "force-dynamic";
+
 export default async function RoomHistoryPage({ params }: { params: { id: string } }) {
   const unit = await db.unit.findUnique({
     where: { id: params.id },

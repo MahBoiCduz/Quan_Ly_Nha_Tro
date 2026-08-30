@@ -6,6 +6,8 @@ import { deleteUser } from "./user-actions";
 import { ActionButton } from "@/components/action-button";
 import { Trash2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function UsersPage() {
   const session = await auth();
   const users = await db.user.findMany({ orderBy: { createdAt: "asc" } });

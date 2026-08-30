@@ -10,6 +10,8 @@ import { TenantInfoSection } from "./tenant-info-section";
 import { LeaseBillsList } from "./lease-bills-list";
 import { History, Plus } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function RoomDetailPage({ params }: { params: { id: string } }) {
   const unit = await db.unit.findUnique({
     where: { id: params.id },

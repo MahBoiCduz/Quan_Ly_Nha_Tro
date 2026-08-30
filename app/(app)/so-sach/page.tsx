@@ -5,6 +5,8 @@ import { loadLedgerInputs } from "@/lib/ledger-source";
 import { LedgerTable } from "./ledger-table";
 import { FileDown } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function LedgerPage() {
   const { payments, expenses } = await loadLedgerInputs(db);
   const rows = buildLedger(payments, expenses);

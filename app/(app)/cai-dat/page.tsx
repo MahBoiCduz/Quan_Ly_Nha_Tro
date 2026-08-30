@@ -3,6 +3,8 @@ import { SettingForm } from "./setting-form";
 import { BillingProfiles, DefaultProfileForm } from "./billing-profiles";
 import { RoomAssignment } from "./room-assignment";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const [setting, defaultProfile, profiles, units] = await Promise.all([
     db.setting.findUnique({ where: { id: "singleton" } }),

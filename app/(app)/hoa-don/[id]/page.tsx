@@ -10,6 +10,8 @@ import { PaymentPanel } from "./payment-panel";
 import { DeleteBillButton } from "./delete-bill-button";
 import { FileDown, Pencil } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã thu", overdue: "Quá hạn" };
 
 export default async function BillDetailPage({ params }: { params: { id: string } }) {

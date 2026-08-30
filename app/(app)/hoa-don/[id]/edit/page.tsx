@@ -4,6 +4,8 @@ import type { LineItem } from "@/lib/billing";
 import { BackLink } from "@/components/back-link";
 import { GenerateForm } from "../../generate-form";
 
+export const dynamic = "force-dynamic";
+
 /** Format a Date to "YYYY-MM-DD" in Vietnam time (matches vnToday convention). */
 function toDateInputValue(d: Date): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(d);

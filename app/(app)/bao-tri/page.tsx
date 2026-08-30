@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { ScheduleForm } from "./schedule-form";
 import { MaintenanceTable } from "./maintenance-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function MaintenancePage() {
   const [schedules, units] = await Promise.all([
     db.maintenanceSchedule.findMany({ include: { unit: true }, orderBy: { nextDueAt: "asc" } }),

@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { BillsList } from "./bills-list";
 import { Plus } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function BillsPage({ searchParams }: { searchParams: { status?: string } }) {
   const bills = await db.bill.findMany({
     orderBy: { createdAt: "desc" },

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { ExpenseForm } from "./expense-form";
 import { ExpensesTable } from "./expenses-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function ExpensesPage() {
   const expenses = await db.expense.findMany({ orderBy: { date: "desc" } });
   return (
