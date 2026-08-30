@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { getActiveLease } from "@/lib/rooms";
+import { getCurrentOrUpcomingLease } from "@/lib/rooms";
 import { formatVND, formatDate } from "@/lib/format";
 import { BackLink } from "@/components/back-link";
 import { LeaseBillsList } from "../lease-bills-list";
@@ -25,7 +25,7 @@ export default async function RoomHistoryPage({ params }: { params: { id: string
   });
   if (!unit) notFound();
 
-  const active = getActiveLease(unit.leases);
+  const active = getCurrentOrUpcomingLease(unit.leases);
 
   return (
     <div className="space-y-6">

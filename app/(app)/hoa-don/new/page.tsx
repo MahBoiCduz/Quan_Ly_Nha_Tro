@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { BackLink } from "@/components/back-link";
-import { getActiveLease } from "@/lib/rooms";
+import { getCurrentOrUpcomingLease } from "@/lib/rooms";
 import { GenerateForm } from "../generate-form";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
     id: u.id,
     name: u.name,
     billingProfileId: u.billingProfileId,
-    agreedRent: getActiveLease(u.leases)?.agreedRent ?? 0,
+    agreedRent: getCurrentOrUpcomingLease(u.leases)?.agreedRent ?? 0,
     services: u.serviceItems,
   }));
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });

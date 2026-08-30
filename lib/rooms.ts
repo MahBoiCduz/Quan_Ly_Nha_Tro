@@ -21,15 +21,30 @@ export function getActiveLease<T extends { startDate: Date; endDate: Date | null
 }
 
 /**
- * All leases of a unit other than the one active `on` the given date — i.e. the
+ * The unit's "current" lease for display purposes — the most recent lease that
+ * has not ended yet, whether its startDate is in the past (active) or the
+ * future (upcoming). A landlord may pre-register a tenant with a future
+ * move-in date; that tenant should still appear as the room's current tenant.
+ */
+export function getCurrentOrUpcomingLease<T extends { startDate: Date; endDate: Date | null }>(
+  leases: T[],
+  on: Date = new Date(),
+): T | null {
+  const current = leases.filter((l) => l.endDate === null || l.endDate >= on);
+  if (current.length === 0) return null;
+  return current.reduce((a, b) => (b.startDate.getTime() > a.startDate.getTime() ? b : a));
+}
+
+/**
+ * All leases of a unit other than the current (or upcoming) one — i.e. the
  * tenancy history — sorted most-recent first. Used by the room history page.
  */
 export function getPastLeases<T extends { startDate: Date; endDate: Date | null }>(
   leases: T[],
   on: Date = new Date(),
 ): T[] {
-  const active = getActiveLease(leases, on);
+  const current = getCurrentOrUpcomingLease(leases, on);
   return leases
-    .filter((l) => l !== active)
+    .filter((l) => l !== current)
     .sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
 }

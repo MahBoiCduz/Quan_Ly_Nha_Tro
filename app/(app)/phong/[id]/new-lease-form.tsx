@@ -1,13 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 import { IdCardUploader } from "@/components/id-card-uploader";
 import { startLease } from "./lease-actions";
 
 export function NewLeaseForm({ unitId }: { unitId: string }) {
-  const router = useRouter();
   const toast = useToast();
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
@@ -18,10 +16,12 @@ export function NewLeaseForm({ unitId }: { unitId: string }) {
     const res = await startLease(unitId, formData);
     if (res?.error) toast.error(res.error);
     else {
-      // Re-render the room page so the "Khách thuê mới" form is replaced by the
-      // tenant info + active lease panel (startLease only invalidates the cache).
-      router.refresh();
       toast.success("Đã tạo khách thuê và hợp đồng");
+      // router.refresh() proved unreliable for this form-action pattern in
+      // Next 14.2 (the page stayed on "Khách thuê mới" even after data was
+      // saved). Force a full reload so the room page re-renders with the new
+      // tenant + active lease panel.
+      setTimeout(() => window.location.reload(), 600);
     }
   }
 

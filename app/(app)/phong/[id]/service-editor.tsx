@@ -15,7 +15,12 @@ export function ServiceEditor({ unitId, items }: { unitId: string; items: Item[]
   async function onAdd(formData: FormData) {
     const res = await addServiceItem(unitId, formData);
     if (res?.error) toast.error(res.error);
-    else { router.refresh(); toast.success("Đã thêm dịch vụ"); }
+    else {
+      toast.success("Đã thêm dịch vụ");
+      // Same form-action refresh issue as NewLeaseForm — force a reload so the
+      // service list re-renders with the new item.
+      setTimeout(() => window.location.reload(), 600);
+    }
   }
 
   async function onDelete(id: string) {

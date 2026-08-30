@@ -5,8 +5,10 @@
 > ban đầu, nay đã lạc hậu: chưa có hồ sơ thanh toán, người ở cùng, chỉ số
 > điện/nước, quản lý người dùng…).
 >
-> - **Phiên bản:** 1.0
-> - **Cập nhật:** 2026-07-01
+> - **Phiên bản:** 1.1
+> - **Cập nhật:** 2026-08-30
+> - **Nhật ký thay đổi:** `docs/CHANGELOG.md` (quyết định theo thời gian; SRS
+>   này giữ trạng thái hiện tại)
 > - **Phạm vi mã nguồn:** nhánh `master` (đã gộp tới PR #11 — multi-tenant &
 >   flexible billing)
 > - **Trạng thái:** Giai đoạn 1 (nội bộ / chỉ admin)
@@ -44,6 +46,7 @@ thu chi, sổ sách, bảo trì và nhắc nợ qua Zalo. Cổng thông tin cho 
 ### 1.4 Tài liệu tham chiếu
 - Thiết kế gốc: `docs/superpowers/specs/2026-06-18-rental-management-design.md`
 - Các kế hoạch triển khai: `docs/superpowers/plans/*`
+- Nhật ký thay đổi: `docs/CHANGELOG.md`
 - Hướng dẫn triển khai: `DEPLOY.md`, `README.md`
 - Lược đồ CSDL: `prisma/schema.prisma`, `prisma/migrations/*`
 
@@ -435,8 +438,12 @@ trong DB cho tới khi có sự kiện thanh toán (giá trị "overdue" lưu s�
 chi)` sắp xếp theo ngày.
 
 ### 6.4 Vòng đời hợp đồng
-- Hợp đồng **đang hiệu lực** nếu `startDate ≤ hôm nay` và (`endDate` null hoặc
-  `≥ hôm nay`).
+- Hợp đồng được coi là **hiện tại/sắp tới** (để hiển thị và lập hoá đơn) nếu
+  **chưa kết thúc**: `endDate` null hoặc `≥ hôm nay` — **bất kể** `startDate` đã
+  qua hay còn ở tương lai (`getCurrentOrUpcomingLease`). Khách đã ký hợp đồng
+  nhưng chưa đến ngày vào vẫn được hiển thị và lập hoá đơn được.
+- Hợp đồng **đã bắt đầu** (ngữ nghĩa cũ `getActiveLease`: `startDate ≤ hôm nay`)
+  không còn dùng ở production; giữ lại trong `lib/rooms.ts` để tham chiếu.
 - Bắt đầu hợp đồng ⇒ `Unit.status = occupied`; kết thúc ⇒ `vacant`.
 - Người ở cùng không bị tính tiền; xoá thẳng an toàn.
 

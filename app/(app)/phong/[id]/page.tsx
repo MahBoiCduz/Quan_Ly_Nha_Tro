@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getActiveLease, getPastLeases } from "@/lib/rooms";
+import { getCurrentOrUpcomingLease, getPastLeases } from "@/lib/rooms";
 import { BackLink } from "@/components/back-link";
 import { ServiceEditor } from "./service-editor";
 import { LeasePanel } from "./lease-panel";
@@ -33,7 +33,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
   });
   if (!unit) notFound();
 
-  const lease = getActiveLease(unit.leases);
+  const lease = getCurrentOrUpcomingLease(unit.leases);
   const pastLeases = getPastLeases(unit.leases);
 
   return (

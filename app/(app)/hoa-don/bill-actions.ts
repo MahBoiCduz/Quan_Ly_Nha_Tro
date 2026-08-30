@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getActiveLease } from "@/lib/rooms";
+import { getCurrentOrUpcomingLease } from "@/lib/rooms";
 import { normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
 import { billGenerateSchema, billUpdateSchema } from "@/lib/bill-schema";
 
@@ -31,8 +31,8 @@ export async function generateBill(formData: FormData) {
   });
   if (!unit) return { error: "Không tìm thấy phòng" };
 
-  const lease = getActiveLease(unit.leases);
-  if (!lease) return { error: "Phòng chưa có hợp đồng đang hiệu lực" };
+  const lease = getCurrentOrUpcomingLease(unit.leases);
+  if (!lease) return { error: "Phòng chưa có khách thuê" };
 
   // Totals are recomputed from the submitted quantity × unitPrice, never trusted.
   // Gate computations on type: elec_water skips line items, room skips meters.

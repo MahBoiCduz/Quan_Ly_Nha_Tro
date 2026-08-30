@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupUnitsByFloor, getActiveLease, getPastLeases } from "@/lib/rooms";
+import { groupUnitsByFloor, getActiveLease, getCurrentOrUpcomingLease, getPastLeases } from "@/lib/rooms";
 
 describe("groupUnitsByFloor", () => {
   it("buckets units by their floor", () => {
@@ -24,6 +24,22 @@ describe("getActiveLease", () => {
   it("ignores a future lease", () => {
     const lease = { startDate: new Date("2026-07-01"), endDate: null };
     expect(getActiveLease([lease], on)).toBeNull();
+  });
+});
+
+describe("getCurrentOrUpcomingLease", () => {
+  const on = new Date("2026-06-15");
+  it("returns an upcoming (future-dated) lease that hasn't started", () => {
+    const lease = { startDate: new Date("2026-07-01"), endDate: null };
+    expect(getCurrentOrUpcomingLease([lease], on)).toBe(lease);
+  });
+  it("returns the active lease when present", () => {
+    const lease = { startDate: new Date("2026-01-01"), endDate: null };
+    expect(getCurrentOrUpcomingLease([lease], on)).toBe(lease);
+  });
+  it("ignores a lease that has ended", () => {
+    const lease = { startDate: new Date("2026-01-01"), endDate: new Date("2026-05-01") };
+    expect(getCurrentOrUpcomingLease([lease], on)).toBeNull();
   });
 });
 
