@@ -69,7 +69,7 @@ export default async function DashboardPage() {
   const now = new Date();
   const since = new Date(now.getFullYear(), now.getMonth() - 5, 1);
   const [units, bills, schedules, paymentRows] = await Promise.all([
-    db.unit.findMany({ select: { status: true } }),
+    db.unit.findMany({ select: { leases: { select: { endDate: true } } } }),
     db.bill.findMany({
       where: { status: { not: "paid" } },
       select: { grandTotal: true, dueDate: true, payments: { select: { amount: true } } },

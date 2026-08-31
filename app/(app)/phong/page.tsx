@@ -21,7 +21,7 @@ export default async function RoomsPage() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
             {byFloor.get(floor)!.map((u) => {
               const lease = getCurrentOrUpcomingLease(u.leases);
-              const occupied = u.status === "occupied";
+              const occupied = lease !== null;
               return (
                 <Link key={u.id} href={`/phong/${u.id}`}
                   className="card p-4 hover:border-brand/40 transition-colors">

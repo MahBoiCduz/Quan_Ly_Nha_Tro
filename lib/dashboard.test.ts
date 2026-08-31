@@ -5,7 +5,11 @@ describe("computeDashboardStats", () => {
   const now = new Date("2026-06-10");
   it("counts occupancy, outstanding, overdue, and due maintenance", () => {
     const stats = computeDashboardStats({
-      units: [{ status: "occupied" }, { status: "occupied" }, { status: "vacant" }],
+      units: [
+        { leases: [{ endDate: null }] },                   // occupied (open-ended)
+        { leases: [{ endDate: new Date("2026-07-01") }] }, // occupied (ends in future)
+        { leases: [{ endDate: new Date("2026-05-01") }] }, // vacant (ended)
+      ],
       bills: [
         // overdue, partially paid: outstanding 3,000,000
         { grandTotal: 5000000, dueDate: new Date("2026-06-05"), payments: [{ amount: 2000000 }] },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupUnitsByFloor, getActiveLease, getCurrentOrUpcomingLease, getPastLeases } from "@/lib/rooms";
+import { groupUnitsByFloor, getActiveLease, getCurrentOrUpcomingLease, getPastLeases, hasCurrentOrUpcomingLease } from "@/lib/rooms";
 
 describe("groupUnitsByFloor", () => {
   it("buckets units by their floor", () => {
@@ -40,6 +40,28 @@ describe("getCurrentOrUpcomingLease", () => {
   it("ignores a lease that has ended", () => {
     const lease = { startDate: new Date("2026-01-01"), endDate: new Date("2026-05-01") };
     expect(getCurrentOrUpcomingLease([lease], on)).toBeNull();
+  });
+});
+
+describe("hasCurrentOrUpcomingLease", () => {
+  const on = new Date("2026-06-15");
+  it("is true when a lease is open-ended", () => {
+    expect(hasCurrentOrUpcomingLease([{ endDate: null }], on)).toBe(true);
+  });
+  it("is true when a lease ends in the future", () => {
+    expect(hasCurrentOrUpcomingLease([{ endDate: new Date("2026-08-01") }], on)).toBe(true);
+  });
+  it("is true when any lease is still valid among ended ones", () => {
+    expect(hasCurrentOrUpcomingLease([
+      { endDate: new Date("2026-05-01") },
+      { endDate: new Date("2026-08-01") },
+    ], on)).toBe(true);
+  });
+  it("is false when all leases have ended", () => {
+    expect(hasCurrentOrUpcomingLease([{ endDate: new Date("2026-05-01") }], on)).toBe(false);
+  });
+  it("is false for no leases", () => {
+    expect(hasCurrentOrUpcomingLease([], on)).toBe(false);
   });
 });
 

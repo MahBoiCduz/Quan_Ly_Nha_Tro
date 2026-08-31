@@ -1,15 +1,16 @@
 import { billStatusFor } from "@/lib/billing";
 import { dueStatus } from "@/lib/maintenance";
+import { hasCurrentOrUpcomingLease } from "@/lib/rooms";
 
 export function computeDashboardStats(
   input: {
-    units: { status: string }[];
+    units: { leases: { endDate: Date | null }[] }[];
     bills: { grandTotal: number; dueDate: Date; payments: { amount: number }[] }[];
     schedules: { nextDueAt: Date }[];
   },
   now: Date = new Date(),
 ): { occupied: number; vacant: number; outstanding: number; overdueCount: number; maintenanceDueCount: number } {
-  const occupied = input.units.filter((u) => u.status === "occupied").length;
+  const occupied = input.units.filter((u) => hasCurrentOrUpcomingLease(u.leases, now)).length;
   const vacant = input.units.length - occupied;
 
   let outstanding = 0;

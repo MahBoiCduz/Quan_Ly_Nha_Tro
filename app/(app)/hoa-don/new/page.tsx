@@ -9,9 +9,15 @@ const DEFAULT_ELECTRICITY_RATE = 4000;
 const DEFAULT_WATER_RATE = 35000;
 
 export default async function NewBillPage({ searchParams }: { searchParams: { unitId?: string } }) {
+  // "Đang thuê" = có hợp đồng chưa kết thúc (xem hasCurrentOrUpcomingLease).
+  // Lọc theo quan hệ lease thay vì cột denormalized Unit.status — cột này dễ
+  // lệch với bảng Lease (vd import hàng loạt tạo Lease nhưng không set status).
+  const now = new Date();
   const [rawUnits, profiles] = await Promise.all([
     db.unit.findMany({
-      where: { status: "occupied" },
+      where: {
+        leases: { some: { OR: [{ endDate: null }, { endDate: { gte: now } }] } },
+      },
       orderBy: [{ floor: "asc" }, { name: "asc" }],
       select: {
         id: true,
@@ -29,7 +35,7 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
     id: u.id,
     name: u.name,
     billingProfileId: u.billingProfileId,
-    agreedRent: getCurrentOrUpcomingLease(u.leases)?.agreedRent ?? 0,
+    agreedRent: getCurrentOrUpcomingLease(u.leases, now)?.agreedRent ?? 0,
     services: u.serviceItems,
   }));
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });

@@ -36,6 +36,21 @@ export function getCurrentOrUpcomingLease<T extends { startDate: Date; endDate: 
 }
 
 /**
+ * Whether a unit has any lease that hasn't ended yet — the source of truth for
+ * "đang thuê" (occupied). Mirrors {@link getCurrentOrUpcomingLease}: a lease
+ * counts if `endDate` is null or ≥ today, regardless of a future `startDate`.
+ * Replaces the denormalized `Unit.status` flag, which can drift out of sync
+ * with the lease records (e.g. after a bulk import that writes leases but not
+ * the flag).
+ */
+export function hasCurrentOrUpcomingLease<T extends { endDate: Date | null }>(
+  leases: T[],
+  on: Date = new Date(),
+): boolean {
+  return leases.some((l) => l.endDate === null || l.endDate >= on);
+}
+
+/**
  * All leases of a unit other than the current (or upcoming) one — i.e. the
  * tenancy history — sorted most-recent first. Used by the room history page.
  */

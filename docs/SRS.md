@@ -444,7 +444,12 @@ chi)` sắp xếp theo ngày.
   nhưng chưa đến ngày vào vẫn được hiển thị và lập hoá đơn được.
 - Hợp đồng **đã bắt đầu** (ngữ nghĩa cũ `getActiveLease`: `startDate ≤ hôm nay`)
   không còn dùng ở production; giữ lại trong `lib/rooms.ts` để tham chiếu.
-- Bắt đầu hợp đồng ⇒ `Unit.status = occupied`; kết thúc ⇒ `vacant`.
+- **"Đang thuê" được tính động từ hợp đồng**, không tin cột denormalized
+  `Unit.status`. Dùng `hasCurrentOrUpcomingLease()` (có hợp đồng chưa kết thúc)
+  để lọc phòng lập hoá đơn, badge "Đang thuê" và đếm phòng đang thuê trên
+  dashboard. `Unit.status` vẫn được ghi khi bắt đầu/kết thúc hợp đồng
+  (`occupied`/`vacant`) nhưng chỉ mang tính lưu trữ, không còn là điều kiện
+  nghiệp vụ.
 - Người ở cùng không bị tính tiền; xoá thẳng an toàn.
 
 ### 6.5 Bảo trì

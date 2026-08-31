@@ -44,7 +44,7 @@ export default async function RoomDetailPage({ params }: { params: { id: string 
           <h1 className="text-2xl font-bold text-ink">{unit.name}</h1>
           <p className="text-sm text-muted">
             Tầng {unit.floor} · {unit.type === "room" ? "Phòng ở" : "Mặt bằng"} ·{" "}
-            {unit.status === "occupied" ? "Đang thuê" : "Trống"}
+            {lease ? "Đang thuê" : "Trống"}
           </p>
         </div>
         {pastLeases.length > 0 && (
