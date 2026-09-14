@@ -12,6 +12,9 @@
 # local review artifacts
 docs/superpowers/.review-*.diff
 
+# the landlord's real workbook — NEVER commit (tenant PII, ~17 MB)
+Thông\ tin\ thuê\ nhà.xlsx
+
 # dependencies
 /node_modules
 /.pnp
