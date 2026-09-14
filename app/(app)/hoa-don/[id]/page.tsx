@@ -5,10 +5,11 @@ import { formatVND, formatDate } from "@/lib/format";
 import type { LineItem } from "@/lib/billing";
 import { billStatusFor } from "@/lib/billing";
 import { BackLink } from "@/components/back-link";
+import { InvoiceExportMenu } from "@/components/invoice-export-menu";
 import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
 import { DeleteBillButton } from "./delete-bill-button";
-import { FileDown, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -35,13 +36,11 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1>{bill.lease.unit.name} — {bill.periodLabel}</h1>
         <div className="flex shrink-0 gap-2 self-start">
-          <a
-            href={`/hoa-don/${bill.id}/pdf`}
-            target="_blank"
-            className="btn-secondary"
-          >
-            <FileDown size={18} /> Xuất PDF
-          </a>
+          <InvoiceExportMenu
+            billId={bill.id}
+            unitName={bill.lease.unit.name}
+            periodLabel={bill.periodLabel}
+          />
           {display !== "paid" && bill.payments.length === 0 && (
             <Link href={`/hoa-don/${bill.id}/edit`} className="btn-secondary">
               <Pencil size={18} /> Sửa

@@ -12,5 +12,8 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // `pdf.worker.min.mjs` is the static pdf.js worker used by the client-side
+  // "export invoice as PNG" feature — a public library file, so it is served
+  // without a session (see scripts/sync-pdf-worker.mjs).
+  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|pdf\\.worker\\.min\\.mjs).*)"],
 };
