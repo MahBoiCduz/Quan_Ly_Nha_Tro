@@ -5,6 +5,9 @@
 *.db-journal
 *.db-wal
 *.db-shm
+# …except the demo dataset, which is committed on purpose so a fresh clone has
+# fake data ready to test with (see README §"Chạy bản demo").
+!prisma/demo.db
 
 # local review artifacts
 docs/superpowers/.review-*.diff
@@ -54,3 +57,6 @@ next-env.d.ts
 
 # uploaded files (PII — never commit)
 /uploads
+
+# pdf.js worker, copied from node_modules by scripts/sync-pdf-worker.mjs
+/public/pdf.worker.min.mjs

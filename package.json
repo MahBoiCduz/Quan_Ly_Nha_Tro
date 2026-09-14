@@ -6,14 +6,20 @@
     "seed": "tsx prisma/seed.ts"
   },
   "scripts": {
+    "predev": "npm run sync:pdf-worker",
     "dev": "next dev",
+    "prebuild": "npm run sync:pdf-worker",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
+    "sync:pdf-worker": "node scripts/sync-pdf-worker.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "demo:reset": "node scripts/demo-db.mjs reset",
+    "demo:push": "node scripts/demo-db.mjs push",
+    "demo:seed": "node scripts/demo-db.mjs seed"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",
@@ -25,9 +31,11 @@
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "dotenv": "^17.4.2",
+    "fflate": "0.8.3",
     "lucide-react": "^1.21.0",
     "next": "14.2.35",
     "next-auth": "^5.0.0-beta.31",
+    "pdfjs-dist": "4.10.38",
     "react": "^18",
     "react-dom": "^18",
     "xlsx": "^0.18.5",
