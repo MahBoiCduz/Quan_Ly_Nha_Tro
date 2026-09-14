@@ -5,13 +5,17 @@
 > ban đầu, nay đã lạc hậu: chưa có hồ sơ thanh toán, người ở cùng, chỉ số
 > điện/nước, quản lý người dùng…).
 >
-> - **Phiên bản:** 1.1
-> - **Cập nhật:** 2026-08-30
+> - **Phiên bản:** 1.2
+> - **Cập nhật:** 2026-09-14 (đối chiếu trực tiếp với mã nguồn)
 > - **Nhật ký thay đổi:** `docs/CHANGELOG.md` (quyết định theo thời gian; SRS
 >   này giữ trạng thái hiện tại)
-> - **Phạm vi mã nguồn:** nhánh `master` (đã gộp tới PR #11 — multi-tenant &
->   flexible billing)
+> - **Phạm vi mã nguồn:** nhánh `master` (commit `a73c01c`) — đã gộp tới PR #11
+>   (multi-tenant & flexible billing)
 > - **Trạng thái:** Giai đoạn 1 (nội bộ / chỉ admin)
+> - **Ghi chú bản 1.2:** gỡ toàn bộ phần **thông báo Zalo** (tính năng đã xoá
+>   khỏi code, migration `20260801000000`); sửa `Payment.receiptImages` (Json,
+>   không còn `receiptImageUrl`); bổ sung `Bill.type`; cập nhật bảng migration và
+>   quy tắc quá hạn (`≥ ngày đến hạn`).
 
 ---
 
@@ -28,8 +32,9 @@ với dịch vụ ngoài.
 Toà nhà gồm **15 phòng ở** (3 tầng × 5 phòng) và **1 mặt bằng thương mại** ở
 tầng trệt (hiện cho một phòng gym thuê) — tổng **16 đơn vị (unit)**. Giai đoạn 1
 phục vụ nội bộ (chủ nhà/admin): quản lý phòng, khách thuê, hợp đồng, hoá đơn,
-thu chi, sổ sách, bảo trì và nhắc nợ qua Zalo. Cổng thông tin cho khách thuê
-được hoãn sang Giai đoạn 2.
+thu chi, sổ sách, bảo trì và tài khoản người dùng. Cổng thông tin cho khách thuê
+được hoãn sang Giai đoạn 2. (Nhắc nợ tự động qua Zalo từng có ở giai đoạn đầu
+nhưng **đã gỡ bỏ** — xem §10.)
 
 ### 1.3 Thuật ngữ
 | Thuật ngữ | Ý nghĩa |
@@ -64,8 +69,7 @@ thu chi, sổ sách, bảo trì và nhắc nợ qua Zalo. Cổng thông tin cho 
 | Xác thực | NextAuth v5 (Credentials: email + mật khẩu, bcrypt) |
 | Xuất PDF | `@react-pdf/renderer` |
 | Xuất Excel | `xlsx` |
-| Lưu ảnh | Vercel Blob (prod) / thư mục `uploads/` (dev) |
-| Thông báo | Zalo OA API |
+| Lưu ảnh | Vercel Blob (prod, khi có `BLOB_READ_WRITE_TOKEN`) / thư mục `uploads/` (dev) |
 | Hosting | Vercel (khuyến nghị) hoặc VPS |
 
 **Nguyên tắc phân lớp** (đang được tuân thủ tốt):
@@ -87,7 +91,12 @@ dành cho Giai đoạn 2.
 - Tiền tệ VND, không thập phân → dùng `Int`.
 - Múi giờ nghiệp vụ cố định **Asia/Ho_Chi_Minh** cho việc so sánh hạn thanh toán.
 - SQLite **không hỗ trợ `enum`** của Prisma → các trường "enum" lưu dạng
-  `String`, giá trị hợp lệ được kiểm bằng zod ở tầng ứng dụng.
+  `String`, giá trị hợp lệ được kiểm bằng zod ở tầng ứng dụng (danh sách giá trị
+  ghi ở đầu `prisma/schema.prisma`).
+- Prisma **không prerender được** lúc build (build không có DB) → `app/(app)/layout.tsx`
+  đặt `export const dynamic = "force-dynamic"`; các route handler đọc DB
+  (`/so-sach/export`) cũng tự khai báo lại vì segment config của layout không
+  áp dụng cho route handler.
 
 ---
 
@@ -198,6 +207,7 @@ Quan hệ: N–1 `Unit`, N–1 `Tenant` (đại diện), 1–N `Tenant` (ngườ
 |---|---|---|
 | id | String | PK |
 | leaseId | String | FK → Lease |
+| type | String | `room` \| `elec_water` \| `both`, mặc định `both` (migration `20260710000000`) |
 | periodLabel | String | ví dụ "Tháng 6/2026" |
 | dueDate | DateTime | hạn thanh toán |
 | status | String | `unpaid` \| `paid` \| `overdue`, mặc định `unpaid` (xem §6.1) |
@@ -225,7 +235,7 @@ thành tiền.
 | method | String | `cash` \| `bank_transfer` |
 | confirmedBy | String? | người xác nhận |
 | notes | String? | |
-| receiptImageUrl | String? | ảnh biên lai |
+| receiptImages | Json | **mảng URL** ảnh biên lai/chuyển khoản (mặc định `[]`, tối đa `MAX_RECEIPT_IMAGES = 10`). Thay cột `receiptImageUrl` cũ từ migration `20260704000000`. |
 | createdAt | DateTime | |
 
 Một hoá đơn có thể có **nhiều** lần thu (thanh toán từng phần).
@@ -276,17 +286,11 @@ Tự động chảy vào cột "Chi" của sổ sách.
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | id | String | PK, mặc định `"singleton"` |
-| adminZaloUserId | String? | Zalo user id nhận thông báo |
 | defaultElectricityRate / defaultWaterRate | Int? | đơn giá điện/nước mặc định khi tạo hoá đơn |
 
 > Các trường thanh toán (bankAccountName…) đã chuyển sang `BillingProfile{isDefault}`
-> (§7.7). `Setting` chỉ còn cấu hình vận hành.
-
-#### NotificationLog — Chống gửi trùng thông báo
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| key | String | PK — khoá idempotent (ví dụ `bill-overdue:<billId>:<date>`) |
-| sentAt | DateTime | |
+> (§7.7); trường `adminZaloUserId` đã bị xoá cùng tính năng thông báo Zalo
+> (migration `20260801000000`). `Setting` nay **chỉ còn** 2 đơn giá mặc định.
 
 ### 3.3 Ngữ nghĩa xoá (referential actions)
 | Quan hệ | onDelete | Ý nghĩa |
@@ -296,7 +300,7 @@ Tự động chảy vào cột "Chi" của sổ sách.
 | MaintenanceSchedule → Unit | SetNull | xoá phòng ⇒ lịch chuyển về phạm vi toà nhà |
 | Lease → Unit / Tenant | Restrict (mặc định) | không cho xoá khi còn hợp đồng |
 | Bill → Lease | Restrict | |
-| Payment → Bill | Restrict | `deleteBill` **tự xoá payment trước** trong 1 transaction |
+| Payment → Bill | Restrict | `deleteBill` **tự xoá payment trước** trong 1 transaction (chỉ với hoá đơn chưa `paid`) |
 
 ---
 
@@ -308,9 +312,13 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 ### FR-1 Tổng quan (`/`)
 - 5 thẻ số liệu: phòng đang thuê/tổng, còn phải thu, hoá đơn quá hạn (dẫn tới
   `/hoa-don?status=overdue`), thu tháng này, bảo trì sắp đến hạn.
-- Biểu đồ "Tiền thu hàng tháng" 6 tháng gần nhất.
-- Nút tác vụ nhanh: Tạo hoá đơn, Thêm khách thuê, Thêm chi tiêu, Gửi thông báo.
+- Biểu đồ "Tiền thu hàng tháng" 6 tháng gần nhất (`monthlyRevenue`, tháng hiện
+  tại ở cuối).
+- Nút tác vụ nhanh: Tạo hoá đơn, Thêm khách thuê, Thêm chi tiêu.
 - **Bắt buộc động** (`force-dynamic`) để số liệu phản ánh thời điểm hiện tại.
+- *Lưu ý kỹ thuật:* do lỗi serialize ngày của Prisma/libSQL trên Linux/Vercel,
+  tổng thu theo tháng lấy bằng `db.$queryRawUnsafe` (chuỗi ngày do server sinh,
+  không nhận input người dùng).
 
 ### FR-2 Phòng (`/phong`, `/phong/[id]`, `/phong/[id]/lich-su`)
 - Danh sách 16 unit gom theo tầng, có badge trạng thái, tên khách đang thuê,
@@ -323,27 +331,72 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
   transaction), kết thúc hợp đồng (set `endDate` + `vacant`), thêm/xoá người ở
   cùng, thêm/sửa/xoá dịch vụ, sửa thông tin khách.
 
-### FR-3 Hoá đơn (`/hoa-don`, `/hoa-don/new`, `/hoa-don/[id]`)
+### FR-3 Hoá đơn (`/hoa-don`, `/hoa-don/new`, `/hoa-don/[id]`, `/hoa-don/[id]/edit`)
 - Danh sách toàn bộ hoá đơn, tìm kiếm không phân biệt dấu/hoa-thường, lọc theo
-  trạng thái.
-- Tạo hoá đơn cho phòng + kỳ: tự nạp dịch vụ, nhập chỉ số điện/nước (đơn giá lấy
-  từ Setting), hỗ trợ **nhiều tháng** (số lượng = số tháng). Xem trước.
-  **Server luôn tính lại** `total = quantity × unitPrice`, `subtotal`,
-  `grandTotal` — không tin client.
+  trạng thái (trạng thái hiển thị tính lại lúc đọc — §6.1), badge loại hoá đơn
+  (`billTypeLabel`).
+- Tạo hoá đơn cho phòng + kỳ: chọn **loại** (`room` / `elec_water` / `both`),
+  tự nạp dịch vụ, nhập chỉ số điện/nước (đơn giá lấy từ Setting), hỗ trợ **nhiều
+  tháng** (số lượng = số tháng). Xem trước. **Server luôn tính lại**
+  `total = quantity × unitPrice`, `subtotal`, `grandTotal` — không tin client;
+  phần không thuộc loại đã chọn bị ép về 0 và các cột chỉ số lưu `null`.
 - Chi tiết: bảng dịch vụ, dòng điện/nước có diễn giải chỉ số, tổng cộng, danh
-  sách thanh toán, form ghi nhận thanh toán, nút Xuất PDF, nút Xoá.
-- Xoá hoá đơn: xoá payment trước rồi xoá bill (1 transaction).
+  sách thanh toán, form ghi nhận thanh toán, nút Xuất PDF, nút Sửa, nút Xoá.
+- **Sửa** (`/hoa-don/[id]/edit`): chỉ khi `status !== "paid"` **và** chưa có
+  payment nào; hạn thanh toán được phép ở quá khứ. Sau khi sửa, `status` đặt lại
+  `unpaid` và tổng được tính lại.
+- Xoá hoá đơn: chặn nếu đã `paid`; nếu chưa, xoá payment trước rồi xoá bill
+  (1 transaction).
 
-### FR-4 Xuất PDF hoá đơn (`/hoa-don/[id]/pdf`)
-- Render đúng mẫu của gia đình: đầu trang (phòng, kỳ, khách, biển số), bảng dịch
-  vụ, tổng (trừ điện/nước), ghi chú, thông tin ngân hàng + ảnh QR.
+### FR-4 Xuất hoá đơn — PDF & ảnh PNG (`/hoa-don/[id]/pdf`, nút "Xuất hoá đơn")
+- **PDF** (`/hoa-don/[id]/pdf`, render server-side bằng `@react-pdf/renderer`): đúng
+  mẫu của gia đình — đầu trang (phòng, kỳ, khách, biển số), bảng dịch vụ, bảng
+  chỉ số điện/nước 7 cột, tổng (trừ điện/nước), ghi chú, thông tin ngân hàng + ảnh QR.
 - **Thứ tự ưu tiên hồ sơ thanh toán:** `bill.billingProfile` → `unit.billingProfile`
-  → `Setting` (mặc định). Ảnh QR được nhúng dạng data-URL (đọc file cục bộ hoặc
-  fetch từ Blob).
+  → hồ sơ mặc định (`BillingProfile{isDefault: true}`). Ảnh QR được nhúng dạng
+  data-URL (`qrDataUrl`: đọc file cục bộ trong `uploads/`).
+- **Ảnh PNG:** nút "Xuất hoá đơn" trên trang chi tiết có thêm mục *Ảnh PNG (nét)*.
+  Ảnh được tạo **ngay trên trình duyệt**: tải chính PDF ở trên → `pdfjs-dist` render
+  từng trang lên canvas → `toBlob("image/png")` → tải về. Nhờ vậy ảnh **giống hệt**
+  bản PDF và **không cần server/không thêm thư viện native**.
+  - Kích thước: bề rộng mục tiêu **1654 px** (≈200 DPI với A4 ⇒ 1654×2340 px).
+  - Tên file: `hoa-don-<tên phòng>-<kỳ>.png` (bỏ dấu, space → `-`), nhiều trang thì
+    thêm `-trang-N`.
+  - Worker của pdf.js được phục vụ tĩnh từ `public/pdf.worker.min.mjs`
+    (`scripts/sync-pdf-worker.mjs` copy lúc `npm run dev`/`npm run build`; webpack
+    không bundle được file worker này).
+  - Hàm thuần: `lib/invoice-image.ts` (tên file + scale) — có unit test;
+    phần chạy ở trình duyệt: `lib/invoice-image-client.ts`; UI:
+    `components/invoice-export-menu.tsx`.
+- **Xuất theo lô** (`/hoa-don`): mỗi dòng có **ô tick**, có **"Chọn tất cả (N)"**
+  (tick đúng các dòng đang hiện sau khi lọc) và thanh **"Xuất ảnh (N)"** với 2
+  lựa chọn: **Tải ZIP** (mọi trình duyệt, `fflate` nén mức store vì PNG đã nén sẵn)
+  hoặc **Lưu vào thư mục…** (File System Access API — chỉ Chrome/Edge; phải gọi
+  `showDirectoryPicker()` ngay trong cú click vì cần user-activation, sau đó render
+  tới đâu ghi tới đó). Có thanh tiến độ, nút **Huỷ**, và lỗi từng hoá đơn không làm
+  hỏng cả lô (cuối cùng báo `Đã xuất 12/13 — lỗi: …`).
+  - **Lọc để chọn lô:** thêm dropdown **Kỳ** và **Loại** (kết hợp AND với ô tìm
+    kiếm và chip trạng thái). **Kỳ lọc theo `Bill.periodLabel`** — nhãn thô như
+    trong dữ liệu, nhóm bằng khoá **bỏ dấu + bỏ mọi khoảng trắng** (`periodKey`)
+    nên `"Tháng 7+8+9/ 2026"` và `"Tháng 7+8+9/2026"` là một mục, còn
+    `"(giữa tháng)"` vẫn tách riêng; so khớp **bằng nhau** (không phải chứa chuỗi);
+    sắp theo **mốc tháng mới nhất** trong nhãn; hiện kèm số lượng.
+  - Chọn hoá đơn **không tự mất khi đổi bộ lọc**; nếu có hoá đơn đã chọn nằm ngoài
+    danh sách, thanh công cụ ghi rõ `(x hoá đơn đã chọn không hiện trong danh sách)`.
+  - Tên file trong gói kèm **loại hoá đơn** để một phòng có 2 hoá đơn cùng kỳ không
+    trùng nhau: `hoa-don-Phong-201-Thang-9-2026-Dien-nuoc.png`; trùng vẫn được xử
+    lý bằng hậu tố `-2`, `-3`… Tên ZIP: cùng kỳ → `hoa-don-Thang-9-2026.zip`,
+    trộn kỳ → `hoa-don-<N>-anh-<yyyy-mm-dd>.zip`.
+  - Hàm thuần `lib/invoice-batch.ts` (khoá kỳ, sắp xếp, tên file, tên ZIP) — có
+    unit test dùng **chính 11 nhãn kỳ thật** trong file Excel của gia đình;
+    điều phối ở `lib/invoice-batch-client.ts`; UI `components/bills-batch-export.tsx`.
 
 ### FR-5 Sổ sách (`/so-sach`, `/so-sach/export`)
 - Nhật ký thu–chi theo thời gian: TT, Ngày, Nội dung, Thu tiền phòng & DV, Thu
-  tiền điện nước, Chi, số dư luỹ kế; dòng tổng theo tháng.
+  tiền điện nước, Chi, Tổng thu, Tồn (số dư luỹ kế) — lọc nhanh theo ngày/nội
+  dung ngay trên bảng.
+- Bảng "Tổng kết theo tháng" (`monthlySummary`): thu phòng & DV, thu điện nước,
+  chi.
 - Mỗi lần thu được **phân bổ** giữa "tiền phòng" và "điện nước" theo tỷ lệ cấu
   thành hoá đơn (`allocatePaymentIncome`).
 - Xuất Excel `.xlsx`.
@@ -358,21 +411,17 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
   thành (ghi log + dời `nextDueAt`).
 
 ### FR-8 Người dùng (`/nguoi-dung`)
+- Đăng nhập bằng email + mật khẩu (`/login`, NextAuth v5 Credentials, bcrypt).
 - Liệt kê, tạo (email + mật khẩu, hash bcrypt, chặn email trùng), xoá tài khoản.
 - Ràng buộc an toàn: **không** cho xoá tài khoản đang đăng nhập; **không** cho
   xoá người dùng cuối cùng.
 
 ### FR-9 Cài đặt (`/cai-dat`)
-- Hồ sơ thanh toán **mặc định** (ngân hàng + QR + ghi chú), Zalo admin, đơn giá
-  điện/nước mặc định.
-- Quản lý các **BillingProfile** phụ và gán hồ sơ cho từng phòng
-  (`saveRoomAssignments`). Xoá hồ sơ sẽ gỡ liên kết ở Unit/Bill về mặc định.
-
-### FR-10 Thông báo Zalo (`/api/cron/notify`, nút "Gửi thông báo")
-- Gửi cho **adminZaloUserId**: hoá đơn quá hạn (chưa trả đủ & quá `dueDate`) và
-  lịch bảo trì đến hạn.
-- **Idempotent** qua `NotificationLog` (không gửi lại cùng một khoá).
-- Cron chạy 1 lần/ngày, bảo vệ bằng `CRON_SECRET`.
+- Hồ sơ thanh toán **mặc định** (ngân hàng + QR + ghi chú) và đơn giá điện/nước
+  mặc định.
+- Quản lý các **BillingProfile** phụ (thêm/sửa/xoá) và gán hồ sơ cho từng phòng
+  (`saveRoomAssignments`). **Không cho xoá hồ sơ mặc định**; xoá hồ sơ phụ sẽ gỡ
+  liên kết ở Unit/Bill để chúng rơi về hồ sơ mặc định.
 
 ---
 
@@ -380,30 +429,39 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 
 ### NFR-1 Bảo mật
 - **Xác thực:** NextAuth v5 Credentials; mật khẩu hash bcrypt; phiên JWT.
-- **Phân quyền tuyến:** `middleware.ts` chặn mọi route trừ `/login`, `/api/auth`,
-  `/api/cron`, tài nguyên tĩnh → chưa đăng nhập bị đẩy về `/login`.
+- **Phân quyền tuyến:** `middleware.ts` (matcher
+  `/((?!api/auth|_next/static|_next/image|favicon.ico|pdf\.worker\.min\.mjs).*)`)
+  chặn mọi route trừ `/login`, `/api/auth`, tài nguyên tĩnh và worker pdf.js
+  (`public/pdf.worker.min.mjs` — file thư viện công khai dùng cho tính năng xuất
+  ảnh) → chưa đăng nhập bị đẩy về `/login`.
 - **Phục vụ file:** `/api/files/[...path]` yêu cầu phiên đăng nhập; tên file
   được `sanitizeFilename` (chặn path traversal: đã kiểm `../../etc/passwd` →
   `etc_passwd`).
-- **Cron:** so khớp `CRON_SECRET` (Bearer / `?secret=` / header) và **fail-closed**
-  khi biến chưa cấu hình.
-- **Upload:** chỉ nhận ảnh `image/jpeg|png|webp`; đặt tên `uuid_<sanitized>`.
+- **Upload:** `/api/upload` yêu cầu phiên; chỉ nhận ảnh `image/jpeg|png|webp`
+  (`isAllowedImage`); đặt tên `uuid_<sanitized>`.
 - *(Điểm cần lưu ý, xem §7.4: `createUser`/`deleteUser` chỉ kiểm "đã đăng nhập"
   chứ chưa kiểm vai trò; upload chưa giới hạn dung lượng / chưa kiểm magic-byte.)*
 
 ### NFR-2 Hiệu năng
 - Tổng quan dùng `select` cột tối thiểu + `Promise.all` + lọc phía DB
-  (`status != paid`, `paidAt >= since`) — tốt.
+  (`status != paid`) — tốt. Riêng tổng thu theo tháng dùng `$queryRawUnsafe`
+  (xem FR-1) vì lỗi serialize ngày của Prisma/libSQL.
 - Một số trang nạp "tất cả rồi lọc phía client" (xem §7.3) — chấp nhận được ở
   quy mô hiện tại nhưng cần chú ý khi dữ liệu lớn.
-- **Thiếu chỉ mục** trên toàn bộ khoá ngoại (xem §7.1) — ưu tiên tối ưu số 1.
+- Chỉ mục cho toàn bộ khoá ngoại + cột lọc nóng **đã có** (15 chỉ mục — §7.1).
 
 ### NFR-3 Bản địa hoá
 - Giao diện tiếng Việt, tiền VND, so sánh hạn thanh toán theo `Asia/Ho_Chi_Minh`
   (`vnToday()`), tìm kiếm bỏ dấu (`normalize`).
 
 ### NFR-4 Triển khai & dữ liệu
-- Dev: SQLite file (`file:./dev.db`). Prod: Turso (`libsql://…` + auth token).
+- Dev: SQLite file — mặc định `file:./dev.db` (tương đối theo **cwd của tiến
+  trình**, xem `lib/db.ts`; có thể ghi đè bằng `DATABASE_URL`). Prod: Turso
+  (`libsql://…` + auth token).
+- **Đồng bộ schema:** local dùng `npx prisma db push` (KHÔNG dùng
+  `prisma migrate dev`; `prisma/dev.db` không có bảng `_prisma_migrations`).
+  Production **không** tự chạy migration — phải đẩy thủ công bằng
+  `node scripts/push-turso-schema.mjs [tên-migration]` (xem `DEPLOY.md`).
 - Vercel Blob cho ảnh khi có `BLOB_READ_WRITE_TOKEN`; ngược lại lưu `uploads/`.
 - Seed dữ liệu: `npm run db:seed`.
 
@@ -414,14 +472,16 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 ### 6.1 Trạng thái hoá đơn
 `billStatusFor(grandTotal, totalPaid, dueDate, now)`:
 1. `totalPaid ≥ grandTotal` → **paid**
-2. `now > dueDate` → **overdue**
+2. ngày-VN(`now`) ≥ ngày-VN(`dueDate`) → **overdue** (quá hạn **kể từ** ngày đến
+   hạn; so sánh theo `yyyy-mm-dd` giờ `Asia/Ho_Chi_Minh` nên không lệ thuộc
+   timezone của server)
 3. còn lại → **unpaid**
 
-Trạng thái được **tính lại lúc đọc** ở Tổng quan, chi tiết hoá đơn và runner
-thông báo. Cột `status` lưu trong DB chỉ được cập nhật khi **ghi nhận thanh
-toán**; vì vậy một hoá đơn chưa trả và đã quá hạn vẫn mang `status = "unpaid"`
-trong DB cho tới khi có sự kiện thanh toán (giá trị "overdue" lưu sẵn là **không
-đáng tin** — xem §7.5).
+Trạng thái được **tính lại lúc đọc** ở Tổng quan, danh sách hoá đơn và chi tiết
+hoá đơn. Cột `status` lưu trong DB chỉ được cập nhật khi **ghi nhận thanh toán**
+(hoặc khi tạo/sửa hoá đơn, luôn đặt `unpaid`); vì vậy một hoá đơn chưa trả và đã
+quá hạn vẫn mang `status = "unpaid"` trong DB cho tới khi có sự kiện thanh toán
+(giá trị "overdue" lưu sẵn là **không đáng tin** — xem §7.5).
 
 ### 6.2 Tính tiền
 - `total_dòng = quantity × unitPrice` (server tính lại, không tin client).
@@ -429,7 +489,11 @@ trong DB cho tới khi có sự kiện thanh toán (giá trị "overdue" lưu s�
 - `điện/nước = max(0, round((mới − cũ) × đơn_giá))`; chỉ số **chỉ tăng**
   (`mới ≥ cũ`, bắt buộc bởi zod).
 - `grandTotal = subtotal + điện + nước`.
-- `dueDate` không được ở quá khứ khi tạo hoá đơn.
+- **Theo loại hoá đơn (`type`):** `room` → điện/nước ép về 0 và các cột chỉ số
+  lưu `null`; `elec_water` → `subtotal = 0` và `lineItems = []`; `both` → đủ cả
+  hai. Zod yêu cầu ≥ 1 dòng tiền phòng/dịch vụ cho `room`/`both`.
+- `dueDate` không được ở quá khứ khi **tạo** hoá đơn; khi **sửa** thì được phép
+  (hoá đơn cũ có thể đã quá hạn).
 
 ### 6.3 Phân bổ thu nhập vào sổ sách
 `allocatePaymentIncome(amount, billSubtotal, billUtilities)`: nếu tổng hoá đơn
@@ -476,8 +540,10 @@ là quét toàn bảng. Các cột được lọc/sắp xếp thường xuyên c
 `Payment.paidAt`, `Unit.billingProfileId`, `Tenant.coLeaseId`,
 `MaintenanceSchedule.unitId`, `MaintenanceSchedule.nextDueAt`,
 `MaintenanceLog.scheduleId`, `Expense.date`. Thay đổi **an toàn, thuận nghịch**
-(chỉ `CREATE INDEX`, không đụng dữ liệu). Cần chạy `prisma migrate deploy`
-(hoặc `prisma migrate dev` khi dev) để áp dụng.
+(chỉ `CREATE INDEX`, không đụng dữ liệu). **Cách áp dụng:** local dùng
+`npx prisma db push`; production đẩy thủ công
+`node scripts/push-turso-schema.mjs 20260701120000_add_indexes` (Vercel không tự
+chạy migration — xem `DEPLOY.md`).
 
 ### 7.2 [TRUNG BÌNH] ❌ KHÔNG LÀM — Thống nhất khái niệm "người thuộc hợp đồng"
 > **Quyết định:** giữ nguyên hai cơ chế hiện tại. Blast radius lớn (7+ nơi đọc
@@ -526,8 +592,9 @@ lúc đọc, nên **không sai kết quả**, nhưng cột lưu trữ mang giá 
 nhầm.
 
 **Đề xuất (chọn 1):** (a) bỏ hẳn cột `status`, luôn tính động; hoặc (b) giữ
-nhưng cho cron cập nhật "overdue" hằng ngày; hoặc (c) giữ nguyên và **ghi rõ**
-cột là "chỉ dấu, không dùng để lọc overdue" (đã ghi ở §6.1). **Ưu tiên: thấp.**
+nhưng cập nhật "overdue" định kỳ (hiện **không** còn cron nào để làm việc này);
+hoặc (c) giữ nguyên và **ghi rõ** cột là "chỉ dấu, không dùng để lọc overdue"
+(đã ghi ở §6.1). **Ưu tiên: thấp.**
 
 ### 7.6 [THẤP] ✅ ĐÃ TRIỂN KHAI — `recordPayment` nguyên tử hoá
 **Vấn đề:** create payment → đọc lại bill → update status là 3 truy vấn rời,
@@ -558,7 +625,7 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 - Dùng transaction đúng chỗ cho các thao tác ghép (bắt đầu/kết thúc hợp đồng,
   xoá hoá đơn, xoá hồ sơ, gán phòng).
 - Tiền dạng số nguyên VND (không lỗi dấu phẩy động).
-- Auth fail-closed, chống path traversal, thông báo idempotent.
+- Auth fail-closed, chống path traversal.
 
 ---
 
@@ -566,10 +633,11 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | Dịch vụ | Mục đích | Cấu hình | Điểm vào |
 |---|---|---|---|
 | Turso (libSQL) | CSDL production | `DATABASE_URL`, `DATABASE_AUTH_TOKEN` | `lib/db.ts` |
-| Vercel Blob | Lưu ảnh CCCD/QR/biên lai | `BLOB_READ_WRITE_TOKEN` | `app/api/upload/route.ts` |
-| Zalo OA | Thông báo nợ/bảo trì | `ZALO_OA_ACCESS_TOKEN`, `Setting.adminZaloUserId` | `lib/zalo.ts`, `lib/notify-runner.ts` |
-| Cron | Kích hoạt thông báo hằng ngày | `CRON_SECRET` | `app/api/cron/notify/route.ts` |
-| NextAuth | Xác thực | `AUTH_SECRET` | `auth.ts`, `middleware.ts` |
+| Vercel Blob | Lưu ảnh CCCD/QR/biên lai (prod) | `BLOB_READ_WRITE_TOKEN` | `app/api/upload/route.ts` |
+| NextAuth | Xác thực | `AUTH_SECRET` | `auth.ts`, `auth.config.ts`, `middleware.ts` |
+
+> **Đã gỡ:** Zalo OA (`lib/zalo.ts`, `lib/notify-runner.ts`) và cron
+> `/api/cron/notify` cùng các biến `ZALO_OA_ACCESS_TOKEN`, `CRON_SECRET` — xem §10.
 
 ---
 
@@ -577,12 +645,18 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | Ngày | Migration | Nội dung |
 |---|---|---|
 | 2026-06-18 | `init` | Unit, ServiceItem, Tenant, Lease, Bill, Payment, Expense, Maintenance*, User, Setting |
-| 2026-06-19 | `add_notification_log` | Bảng NotificationLog (chống gửi trùng) |
+| 2026-06-19 | `add_notification_log` | Bảng NotificationLog (chống gửi trùng) — **đã gỡ 2026-08-01** |
 | 2026-06-28 | `add_meter_readings` | Chỉ số điện/nước + đơn giá trên Bill; đơn giá mặc định trên Setting |
 | 2026-06-29 | `add_billing_profiles` | Bảng BillingProfile; `Unit.billingProfileId`; `Bill.billingProfileId` |
 | 2026-07-01 | `add_co_tenants` | `Tenant.coLeaseId` (người ở cùng) |
 | 2026-07-01 | `add_indexes` | 15 chỉ mục cho toàn bộ FK + cột lọc nóng (§7.1) |
 | 2026-07-02 | `consolidate_default_billing_profile` | `BillingProfile.isDefault`; chuyển hồ sơ mặc định khỏi `Setting`, bỏ 5 cột (§7.7) |
+| 2026-07-04 | `payment_multiple_receipt_images` | `Payment.receiptImages` (Json, backfill từ `receiptImageUrl` rồi drop cột cũ) |
+| 2026-07-10 | `add_bill_type` | `Bill.type` (`room`/`elec_water`/`both`), mặc định `both` |
+| 2026-08-01 | `remove_zalo_notifications` | Drop bảng `NotificationLog`; bỏ `Setting.adminZaloUserId` |
+
+> Thứ tự áp dụng: local `npx prisma db push`; production đẩy từng migration bằng
+> `node scripts/push-turso-schema.mjs <tên-thư-mục>` (xem NFR-4 và `DEPLOY.md`).
 
 ---
 
@@ -591,9 +665,13 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 - Nhập dữ liệu lịch sử từ Google Sheets.
 - Hỗ trợ nhiều toà nhà (multi-property).
 - Phân quyền theo vai trò (admin + staff) — kèm §7.4.
+- **Nhắc nợ/bảo trì tự động** (Zalo OA): đã gỡ ngày 2026-08-01 (commit `dfd73c3`,
+  migration `20260801000000`). Nếu làm lại thì cần dựng lại `NotificationLog`
+  (chống gửi trùng), client Zalo và cron bảo vệ bằng secret.
 
 ## 11. Tiêu chí thành công (Giai đoạn 1)
 - Tạo được PDF hoá đơn đúng mẫu trong dưới 1 phút.
 - Ghi nhận một thanh toán trong dưới 10 giây.
 - Sổ sách tự tính tổng tháng, thay thế thao tác thủ công trên Google Sheets.
-- Nhắc Zalo chạy đúng cho hoá đơn quá hạn và bảo trì đến hạn.
+- Hoá đơn điện nước và hoá đơn tiền phòng tách bạch được (loại `room` /
+  `elec_water` / `both`).

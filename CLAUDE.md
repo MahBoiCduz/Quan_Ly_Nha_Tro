@@ -19,7 +19,7 @@ After any schema or server-action change, restart the dev server (Next.js HMR do
 
 **Stack:** Next.js 14 App Router (pages router not used), Prisma 7 + SQLite (local) / Turso libSQL (production), Tailwind CSS, NextAuth v5 (Credentials), Zod, Vitest, Playwright.
 
-**Dual database:** `lib/db.ts` creates a Prisma client with the `@prisma/adapter-libsql` adapter. The same codebase runs against a local `dev.db` file in dev and a remote Turso/libSQL database in production. `DATABASE_URL` switches between `file:./dev.db` (local) and `libsql://...` (Turso). `DATABASE_AUTH_TOKEN` is only needed for Turso.
+**Dual database:** `lib/db.ts` creates a Prisma client with the `@prisma/adapter-libsql` adapter. The same codebase runs against a local `dev.db` file in dev and a remote Turso/libSQL database in production. `DATABASE_URL` switches between `file:./dev.db` (local, resolved against the process cwd) and `libsql://...` (Turso). `DATABASE_AUTH_TOKEN` is only needed for Turso.
 
 **Money:** All amounts are integers in Vietnamese đồng (VND). Format with `formatVND()` from `lib/format.ts`. Never use floats for money.
 
@@ -27,7 +27,7 @@ After any schema or server-action change, restart the dev server (Next.js HMR do
 
 **Force-dynamic:** `app/(app)/layout.tsx` sets `export const dynamic = "force-dynamic"` because Prisma can't statically prerender — at build time no database is available and it would crash on "no such table."
 
-**Auth:** NextAuth v5 middleware protects everything except `/login` and `/api/auth`. Login uses a credentials provider with bcrypt-hashed passwords stored in the `User` table. All users have role `"admin"`.
+**Auth:** NextAuth v5 middleware protects everything except `/login`, `/api/auth` and static assets (`middleware.ts` matcher). Login uses a credentials provider with bcrypt-hashed passwords stored in the `User` table. All users have role `"admin"`. Keep the `auth.config.ts` (edge-safe, used by middleware) / `auth.ts` (Node, uses bcrypt + Prisma) split — importing the Node half into middleware breaks the edge build.
 
 ### Bill architecture
 
@@ -37,7 +37,8 @@ Bills are the core domain object. Key design decisions:
 - **Electricity/water are NOT in lineItems.** They're stored in separate columns (`electricityAmount`, `waterAmount`) and sit outside `subtotal`. `grandTotal = subtotal + electricityAmount + waterAmount`. This matches the family's paper invoice template.
 - **Meter readings** (`electricityOld/New`, `waterOld/New`) and their `*Rate` are stored so the invoice PDF can show the calculation breakdown.
 - **Status lifecycle:** `"unpaid"` → `"overdue"` (auto-detected via `billStatusFor()` comparing `dueDate` to now) → `"paid"` (when `totalPaid >= grandTotal`). Status is recomputed on every payment.
-- **Edit guard:** Bills can only be edited when `status !== "paid"` AND `payments.length === 0`. Once money is recorded, the bill is immutable. `app/(app)/hoa-don/bill-actions.ts` enforces this server-side.
+- **Edit guard:** Bills can only be edited when `status !== "paid"` AND `payments.length === 0`. Once money is recorded, the bill is immutable. `app/(app)/hoa-don/bill-actions.ts` enforces this server-side. Deleting is blocked only for `paid` bills; deleting an unpaid bill also deletes its payments in one `$transaction`.
+- **Status on read:** `billStatusFor()` compares Vietnam dates with `>=`, so a bill counts as overdue from its due date onward. List/detail/dashboard recompute the display status at read time because the stored `status` column is only written on create/update/payment.
 - **All totals recomputed server-side** via pure functions in `lib/billing.ts` — client-submitted totals are never trusted.
 - **Bill types:** Each bill has a `type` column: `"room"` (rent+services only), `"elec_water"` (meter readings only), or `"both"` (combined — default). The form at `/hoa-don/new` has a pill-toggle to select type. Sections are conditionally shown/hidden in the form, detail page, and PDF. Zod schemas enforce type-specific rules (line items required for room/both; meter checks only for elec_water/both). Meter fields are nullable — stored as `null` for room-type bills.
 
@@ -63,13 +64,17 @@ A lease has one primary tenant (the billing contact) and zero or more co-tenants
 | Directory | Purpose |
 |---|---|
 | `app/(app)/` | Authenticated dashboard routes |
-| `app/api/` | Unauthenticated API routes (auth, upload, cron) |
+| `app/api/` | Route handlers: `auth` (NextAuth), `upload`, `files/[...path]` — both file routes check the session themselves |
 | `lib/` | Pure helpers, Zod schemas, DB client — all unit-tested |
 | `components/` | Shared UI (nav, toast, form controls) |
 | `prisma/` | Schema, migrations, seed |
-| `scripts/` | Operational scripts (Turso schema push, bulk import) |
-| `docs/` | Historical implementation plans |
+| `scripts/` | Operational scripts (Turso schema push, bulk import, password reset, DB checks) |
+| `docs/` | `SRS.md` (current spec), `CHANGELOG.md`, historical plans |
 | `e2e/` | Playwright end-to-end tests |
+
+### Removed features (do not resurrect from old notes)
+
+**Zalo notifications are gone** (commit `dfd73c3`, migration `20260801000000_remove_zalo_notifications`): no `lib/zalo.ts`, no `lib/notify-runner.ts`, no `NotificationLog` model, no `Setting.adminZaloUserId`, no `/api/cron/*`, and no `ZALO_OA_ACCESS_TOKEN` / `CRON_SECRET` env vars. Only the `Tenant.zaloId` data field remains. `docs/superpowers/*` still describes the old design — treat that as history, not as current spec.
 
 ### Production deployment (Vercel + Turso)
 
@@ -95,6 +100,9 @@ Two ways to apply migrations to Turso:
 
 ### Patterns
 
+- **PDF & PNG export:** the invoice PDF is rendered server-side in `app/(app)/hoa-don/[id]/pdf/route.ts` with `@react-pdf/renderer`. The PNG export rasterises that same PDF in the browser (`lib/invoice-image-client.ts`): `pdfjs-dist` is imported **dynamically inside a client module** — never import it from a server file, and never bundle the worker (webpack fails on it; it is copied to `public/pdf.worker.min.mjs` by `scripts/sync-pdf-worker.mjs` via `predev`/`prebuild`).
+- **Batch export (`/hoa-don`):** tick bills → ZIP (`fflate`, `level: 0`) or write straight into a folder (`showDirectoryPicker`, which must be called **inside the click handler** because it needs transient user activation; tests stub it via `page.addInitScript`). Pure planning helpers live in `lib/invoice-batch.ts`, orchestration in `lib/invoice-batch-client.ts`, UI in `components/bills-batch-export.tsx`. The period filter keys off `Bill.periodLabel` (free text) with a whitespace-insensitive key — real labels are inconsistent (`"Tháng 5+6+7/2026 (giữa tháng)"`, `"Tháng 7+8+9/ 2026"`, `"15/6 đến hết tháng 8/2026"`).
+- **ES5 type-check target:** `tsconfig.json` sets no `target`, so `tsc` type-checks with ES5 defaults — `for…of` over an iterator (e.g. `String.matchAll`) fails `next build` with "can only be iterated through when using --downlevelIteration". Use `Array.from(...)` and plain index/`exec` loops, and always run `npm run build` (not just `npm test`) after touching `lib/`.
 - **Server actions** use `"use server"` + `revalidatePath()` + `redirect()`. Form submission validates with Zod, recomputes totals server-side, then redirects.
 - **Pure calculation helpers** (`lib/billing.ts`, `lib/format.ts`, `lib/rooms.ts`) have zero dependencies and are unit-tested. Business logic goes here.
 - **Zod schemas** in `lib/` are shared between server actions (validation) and tests.
