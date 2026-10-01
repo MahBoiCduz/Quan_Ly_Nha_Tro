@@ -2,6 +2,7 @@ import React from "react";
 import { Document, Page, View, Text, Image, StyleSheet, Font } from "@react-pdf/renderer";
 import path from "path";
 import type { LineItem } from "@/lib/billing";
+import { monthsOrOne } from "@/lib/billing";
 import { formatVND } from "@/lib/format";
 
 // Register Noto Sans (full Vietnamese diacritic support) from local TTF files.
@@ -102,11 +103,14 @@ const s = StyleSheet.create({
   table: { marginTop: 8, borderWidth: 1, borderColor: "#000" },
   row: { flexDirection: "row" },
   cell: { borderRightWidth: 1, borderBottomWidth: 1, borderColor: "#000", padding: 4 },
-  cTT: { width: "8%", textAlign: "center" },
-  cName: { width: "34%" },
-  cUnit: { width: "14%", textAlign: "center" },
-  cQty: { width: "10%", textAlign: "center" },
-  cPrice: { width: "16%", textAlign: "right" },
+  // Service-table columns (7): quantity (units: people, motorbikes…) and the
+  // month count are separate columns, so "4 người × 3 tháng" is readable.
+  cTT: { width: "6%", textAlign: "center" },
+  cName: { width: "30%" },
+  cUnit: { width: "12%", textAlign: "center" },
+  cQty: { width: "9%", textAlign: "center" },
+  cMonths: { width: "10%", textAlign: "center" },
+  cPrice: { width: "15%", textAlign: "right" },
   cTotal: { width: "18%", textAlign: "right", borderRightWidth: 0 },
   // Meter-table columns (7): readings are their own columns (tháng trước / tháng sau).
   mName: { width: "22%" },
@@ -153,7 +157,7 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
           Người thuê: {model.tenantName} (ĐT: {model.phone})
         </Text>
 
-        {/* Service table — 6 columns, hidden for elec_water bills */}
+        {/* Service table — 7 columns, hidden for elec_water bills */}
         {model.type !== "elec_water" && (
           <View style={s.table}>
             <View style={s.row}>
@@ -161,6 +165,7 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
               <Text style={[s.cell, s.cName]}>Các dịch vụ</Text>
               <Text style={[s.cell, s.cUnit]}>Đơn vị tính</Text>
               <Text style={[s.cell, s.cQty]}>Số lượng</Text>
+              <Text style={[s.cell, s.cMonths]}>Số tháng</Text>
               <Text style={[s.cell, s.cPrice]}>Đơn giá</Text>
               <Text style={[s.cell, s.cTotal]}>Thành tiền</Text>
             </View>
@@ -170,6 +175,9 @@ export function InvoiceDocument({ model }: { model: InvoiceModel }) {
                 <Text style={[s.cell, s.cName]}>{r.name}</Text>
                 <Text style={[s.cell, s.cUnit]}>{r.measureUnit}</Text>
                 <Text style={[s.cell, s.cQty]}>{r.quantity}</Text>
+                {/* Bills created before the month axis existed have no `months`
+                    (the quantity was the month count then) → leave the cell blank. */}
+                <Text style={[s.cell, s.cMonths]}>{monthsOrOne(r.months) > 1 ? monthsOrOne(r.months) : ""}</Text>
                 <Text style={[s.cell, s.cPrice]}>{formatVND(r.unitPrice)}</Text>
                 <Text style={[s.cell, s.cTotal]}>{formatVND(r.total)}</Text>
               </View>

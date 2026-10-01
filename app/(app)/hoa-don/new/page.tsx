@@ -23,21 +23,27 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
         id: true,
         name: true,
         billingProfileId: true,
-        serviceItems: { select: { name: true, measureUnit: true, defaultPrice: true } },
-        leases: { select: { agreedRent: true, startDate: true, endDate: true } },
+        serviceItems: { select: { name: true, measureUnit: true, defaultPrice: true, perPerson: true, defaultQuantity: true } },
+        // coTenants = the extra people sharing the lease; a per-person service
+        // bills 1 (the main tenant) + their count.
+        leases: { select: { agreedRent: true, startDate: true, endDate: true, coTenants: { select: { id: true } } } },
       },
     }),
     db.billingProfile.findMany({ where: { isDefault: false }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   // Flatten each unit to its billing basics: agreed rent (from the active lease) +
   // fixed services, so the form can prefill the editable line-items table.
-  const units = rawUnits.map((u) => ({
-    id: u.id,
-    name: u.name,
-    billingProfileId: u.billingProfileId,
-    agreedRent: getCurrentOrUpcomingLease(u.leases, now)?.agreedRent ?? 0,
-    services: u.serviceItems,
-  }));
+  const units = rawUnits.map((u) => {
+    const lease = getCurrentOrUpcomingLease(u.leases, now);
+    return {
+      id: u.id,
+      name: u.name,
+      billingProfileId: u.billingProfileId,
+      agreedRent: lease?.agreedRent ?? 0,
+      occupancy: lease ? 1 + lease.coTenants.length : 1,
+      services: u.serviceItems,
+    };
+  });
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
 
   // Latest meter readings per unit (from the most recent bill that recorded them)

@@ -100,6 +100,19 @@ Next.js không luôn nhận thay đổi phía server.
 - **`CLAUDE.md`** — hướng dẫn kiến trúc/lint cho AI agent.
 - **`DEPLOY.md`** — deploy Vercel + Turso (Vercel **không** tự chạy migration).
 
+## Dịch vụ theo số người & số tháng
+
+Mỗi dòng hoá đơn có **2 trục số lượng**: **SL** (số người ở / số xe / 1 cho tiền thuê) và
+**Số tháng (N)**; thành tiền = `SL × đơn giá × N`.
+
+- Ở trang chi tiết phòng, mỗi dịch vụ có ô tick **"tính theo số người"** (ô Số lượng bị vô
+  hiệu hoá) hoặc một **Số lượng** cố định — ví dụ Xe máy = 2; đặt 0 thì dịch vụ không xuất
+  hiện trên hoá đơn mới.
+- Số người ở = **1 người thuê chính + khách ở chung** (đọc tự động, không phải nhập tay);
+  vẫn sửa được cột SL ở màn tạo hoá đơn nếu thực tế khác.
+- Hoá đơn **đã tạo** giữ nguyên số tiền: sửa giá/xe/số người ở trang phòng không làm đổi
+  hoá đơn cũ, và hoá đơn cũ (chưa có `months`) in ra y như trước.
+
 ## Xuất hoá đơn
 
 Trên trang chi tiết hoá đơn, nút **"Xuất hoá đơn"** cho 2 lựa chọn:

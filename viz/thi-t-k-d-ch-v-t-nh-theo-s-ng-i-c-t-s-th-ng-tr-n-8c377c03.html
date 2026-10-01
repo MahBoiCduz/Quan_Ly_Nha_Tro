@@ -1,0 +1,232 @@
+<div id="svc-mock">
+  <style>
+    #svc-mock { display: grid; gap: 14px; font-variant-numeric: tabular-nums; }
+    #svc-mock .screen { border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--card-foreground); overflow: hidden; }
+    #svc-mock .grid2 { display: grid; gap: 14px; grid-template-columns: minmax(250px, 1fr) minmax(380px, 1.7fr); align-items: start; }
+    @media (max-width: 780px) { #svc-mock .grid2 { grid-template-columns: 1fr; } }
+    #svc-mock .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--foreground) 4%, transparent); }
+    #svc-mock .bar-title { font-size: 13px; font-weight: 600; }
+    #svc-mock .bar-sub { font-size: 11px; color: var(--muted-foreground); }
+    #svc-mock .body { padding: 12px 14px 14px; }
+    #svc-mock .svc { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+    #svc-mock .svc:first-child { border-top: 0; }
+    #svc-mock .svc-name { font-size: 13px; }
+    #svc-mock .svc-unit { font-size: 11px; color: var(--muted-foreground); }
+    #svc-mock .svc-flag { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--muted-foreground); cursor: pointer; white-space: nowrap; }
+    #svc-mock .svc-flag:has(input:checked) { color: var(--primary); font-weight: 600; }
+    #svc-mock table { width: 100%; border-collapse: collapse; }
+    #svc-mock th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-foreground); font-weight: 600; padding: 4px 6px 6px; text-align: right; white-space: nowrap; }
+    #svc-mock td { font-size: 13px; padding: 7px 6px; text-align: right; border-top: 1px solid var(--border); white-space: nowrap; }
+    #svc-mock th:first-child, #svc-mock td:first-child { text-align: left; white-space: normal; }
+    #svc-mock td.unit, #svc-mock td.mut { color: var(--muted-foreground); font-size: 12px; }
+    #svc-mock tr.pp td { background: color-mix(in srgb, var(--primary) 9%, transparent); }
+    #svc-mock tr.pp td:first-child { box-shadow: inset 3px 0 0 var(--primary); }
+    #svc-mock tr.meter td { color: var(--muted-foreground); }
+    #svc-mock .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); margin-left: 6px; vertical-align: 1px; }
+    #svc-mock .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; padding-bottom: 12px; }
+    #svc-mock .field { display: flex; flex-direction: column; gap: 4px; }
+    #svc-mock .field label { font-size: 11px; color: var(--muted-foreground); }
+    #svc-mock input[type=number] { width: 78px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--background); color: var(--foreground); font: inherit; font-size: 13px; }
+    #svc-mock .totals { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: grid; gap: 6px; }
+    #svc-mock .trow { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+    #svc-mock .trow.big { font-size: 17px; font-weight: 700; padding-top: 8px; border-top: 1px dashed var(--border); }
+    #svc-mock .formula { margin-top: 10px; font-size: 11.5px; color: var(--muted-foreground); line-height: 1.5; }
+    #svc-mock .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    #svc-mock .seg button { font: inherit; font-size: 11.5px; padding: 4px 10px; background: transparent; color: var(--muted-foreground); border: 0; cursor: pointer; }
+    #svc-mock .seg button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+    #svc-mock .iline { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+    #svc-mock .iline:first-child { border-top: 0; }
+    #svc-mock .iline.pp { background: color-mix(in srgb, var(--primary) 9%, transparent); box-shadow: inset 3px 0 0 var(--primary); padding-left: 8px; }
+    #svc-mock .note { font-size: 11.5px; color: var(--muted-foreground); margin-top: 10px; line-height: 1.5; }
+    #svc-mock .sum { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--border); display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; }
+  </style>
+
+  <div class="grid2">
+    <section class="screen">
+      <div class="bar"><span class="bar-title">Phòng 202 · Dịch vụ</span><span class="bar-sub">trang chi tiết phòng</span></div>
+      <div class="body">
+        <div class="svc">
+          <div><div class="svc-name">Internet</div><div class="svc-unit">đơn vị tính: phòng · 100.000 ₫</div></div>
+          <label class="svc-flag"><input type="checkbox" data-flag="internet"> × số người</label>
+        </div>
+        <div class="svc">
+          <div><div class="svc-name">Dịch vụ chung</div><div class="svc-unit">đơn vị tính: người · 150.000 ₫</div></div>
+          <label class="svc-flag"><input type="checkbox" data-flag="chung" checked> × số người</label>
+        </div>
+        <div class="svc">
+          <div><div class="svc-name">Xe máy</div><div class="svc-unit">đơn vị tính: xe · 60.000 ₫</div></div>
+          <label class="svc-flag"><input type="checkbox" data-flag="xe"> × số người</label>
+        </div>
+        <div class="note">Cờ “× số người” bật được cho mọi dịch vụ (không khoá theo đơn vị). Số người không lưu ở đây — lấy tự động <b>1 người thuê chính + khách ở chung</b> tại lúc tạo hoá đơn.</div>
+      </div>
+    </section>
+
+    <section class="screen">
+      <div class="bar"><span class="bar-title">Tạo hoá đơn · Phòng 202</span><span class="bar-sub">Kì: Tháng 5+6+7/2026 · Hạn: 10/08/2026</span></div>
+      <div class="body">
+        <div class="controls">
+          <div class="field"><label>Số người ở (tự động, sửa được ở cột SL)</label><input id="svc-people" type="number" min="1" max="8" value="4"></div>
+          <div class="field"><label>Số tháng tính tiền (N)</label><input id="svc-months" type="number" min="1" max="6" value="3"></div>
+        </div>
+        <table>
+          <thead><tr><th>Dòng</th><th>Đơn vị</th><th>SL</th><th>Đơn giá</th><th>Số tháng</th><th>Thành tiền</th></tr></thead>
+          <tbody id="svc-rows"></tbody>
+        </table>
+        <div class="totals" id="svc-totals"></div>
+        <div class="formula" id="svc-formula"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="screen">
+    <div class="bar">
+      <span class="bar-title">Hoá đơn in ra (PDF / ảnh PNG)</span>
+      <span class="seg" id="svc-mode">
+        <button data-mode="new" aria-pressed="true">Hoá đơn mới</button>
+        <button data-mode="old" aria-pressed="false">Hoá đơn cũ (đã tạo)</button>
+      </span>
+    </div>
+    <div class="body">
+      <div id="svc-inv"></div>
+      <div class="note" id="svc-inv-note"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const vnd = (n) => new Intl.NumberFormat("vi-VN").format(Math.round(n)) + " ₫";
+  const RENT = 3200000;
+  const SERVICES = [
+    { key: "internet", name: "Internet", unit: "phòng", price: 100000, baseQty: 1 },
+    { key: "chung", name: "Dịch vụ chung", unit: "người", price: 150000, baseQty: 1 },
+    { key: "xe", name: "Xe máy", unit: "xe", price: 60000, baseQty: 2 }
+  ];
+  const METERS = [
+    { name: "Tiền điện", unit: "kWh", qty: 120, price: 4000, total: 480000 },
+    { name: "Tiền nước", unit: "m³", qty: 5, price: 35000, total: 175000 }
+  ];
+  const state = { people: 4, months: 3, mode: "new", flags: { internet: false, chung: true, xe: false } };
+
+  const rowsEl = document.getElementById("svc-rows");
+  const totalsEl = document.getElementById("svc-totals");
+  const formulaEl = document.getElementById("svc-formula");
+  const invEl = document.getElementById("svc-inv");
+  const invNoteEl = document.getElementById("svc-inv-note");
+  const peopleEl = document.getElementById("svc-people");
+  const monthsEl = document.getElementById("svc-months");
+
+  const qtyOf = (s) => (state.flags[s.key] ? state.people : s.baseQty);
+  const lineOf = (s, months) => qtyOf(s) * s.price * months;
+
+  function serviceRows(months) {
+    return SERVICES.map((s) => {
+      const qty = qtyOf(s);
+      return {
+        name: s.name,
+        unit: s.unit,
+        qty: qty,
+        price: s.price,
+        months: months,
+        total: qty * s.price * months,
+        pp: state.flags[s.key],
+        perPersonUnit: s.unit === "người"
+      };
+    });
+  }
+
+  function renderTable() {
+    const months = state.months;
+    const rows = serviceRows(months);
+    const subtotal = RENT * months + rows.reduce((a, r) => a + r.total, 0);
+    const meterSum = METERS.reduce((a, m) => a + m.total, 0);
+
+    let html = '<tr><td>Tiền thuê phòng</td><td class="unit">phòng</td><td>1</td><td>' + vnd(RENT) +
+      '</td><td>' + months + '</td><td><b>' + vnd(RENT * months) + '</b></td></tr>';
+
+    for (const r of rows) {
+      html += '<tr class="' + (r.pp ? "pp" : "") + '"><td>' + r.name + (r.pp ? '<span class="tag">theo số người</span>' : "") +
+        '</td><td class="unit">' + r.unit + '</td><td>' + r.qty + '</td><td>' + vnd(r.price) +
+        '</td><td>' + months + '</td><td><b>' + vnd(r.total) + '</b></td></tr>';
+    }
+    for (const m of METERS) {
+      html += '<tr class="meter"><td>' + m.name + '</td><td class="unit">' + m.unit + '</td><td>' + m.qty +
+        '</td><td>' + vnd(m.price) + '</td><td class="mut">—</td><td>' + vnd(m.total) + '</td></tr>';
+    }
+    rowsEl.innerHTML = html;
+
+    totalsEl.innerHTML =
+      '<div class="trow"><span>Tạm tính (thuê phòng + dịch vụ)</span><span>' + vnd(subtotal) + '</span></div>' +
+      '<div class="trow"><span>Điện + nước (theo chỉ số, không × số tháng)</span><span>' + vnd(meterSum) + '</span></div>' +
+      '<div class="trow big"><span>Tổng cộng</span><span>' + vnd(subtotal + meterSum) + '</span></div>';
+
+    const ppRows = rows.filter((r) => r.pp);
+    formulaEl.innerHTML = ppRows.length
+      ? "Công thức dòng theo số người: <b>SL × Đơn giá × Số tháng</b> — " +
+        ppRows.map((r) => r.name + ": " + r.qty + " × " + vnd(r.price) + " × " + months + " tháng = <b>" + vnd(r.total) + "</b>").join(" · ")
+      : "Chưa bật cờ “× số người” cho dịch vụ nào — mọi dòng đang tính SL × Đơn giá × Số tháng như hiện nay.";
+  }
+
+  function renderInvoice() {
+    const months = state.months;
+    const old = state.mode === "old";
+
+    if (old) {
+      const rows = SERVICES.map((s) => ({ name: s.name, unit: s.unit, qty: months, price: s.price, total: months * s.price }));
+      const subtotal = RENT * months + rows.reduce((a, r) => a + r.total, 0);
+      const meterSum = METERS.reduce((a, m) => a + m.total, 0);
+      let html = '<div class="iline"><span>Tiền thuê phòng (phòng)</span><span>3 × ' + vnd(RENT) + '</span></div>';
+      for (const r of rows) {
+        html += '<div class="iline"><span>' + r.name + ' (' + r.unit + ')</span><span>' + r.qty + ' × ' + vnd(r.price) + '</span></div>';
+      }
+      invEl.innerHTML = html +
+        '<div class="sum"><span>Tổng cộng</span><span>' + vnd(subtotal + meterSum) + '</span></div>';
+      invNoteEl.innerHTML = "Hoá đơn đã tạo trước đây: SL đang là <b>số tháng</b>, không có cờ theo số người ⇒ <b>số tiền và cách hiển thị giữ nguyên 100%</b>, không migrate dữ liệu cũ.";
+      return;
+    }
+
+    const rows = serviceRows(months);
+    let html = '<div class="iline"><span>Tiền thuê phòng <span class="mut">(phòng)</span></span><span>1 × ' + vnd(RENT) + ' × ' + months + ' tháng</span><span><b>' + vnd(RENT * months) + '</b></span></div>';
+    for (const r of rows) {
+      html += '<div class="iline' + (r.pp ? " pp" : "") + '"><span>' + r.name + ' <span class="mut">(' + r.unit + ')</span>' +
+        (r.pp ? '<span class="tag">' + r.qty + ' người</span>' : "") + '</span><span>' + r.qty + ' × ' + vnd(r.price) + ' × ' + months + ' tháng</span><span><b>' + vnd(r.total) + '</b></span></div>';
+    }
+    for (const m of METERS) {
+      html += '<div class="iline"><span>' + m.name + ' <span class="mut">(' + m.unit + ')</span></span><span>' + m.qty + ' × ' + vnd(m.price) + '</span><span>' + vnd(m.total) + '</span></div>';
+    }
+    const subtotal = RENT * months + rows.reduce((a, r) => a + r.total, 0);
+    invEl.innerHTML = html + '<div class="sum"><span>Tổng cộng</span><span>' + vnd(subtotal + METERS.reduce((a, m) => a + m.total, 0)) + '</span></div>';
+    invNoteEl.innerHTML = "Cột mới: mỗi dòng có <b>Đơn vị · SL · Đơn giá · Số tháng</b>, thành tiền = SL × Đơn giá × Số tháng. Dòng theo số người có thêm nhãn “4 người”, dòng điện/nước để trống cột Số tháng.";
+  }
+
+  function renderAll() { renderTable(); renderInvoice(); }
+
+  peopleEl.addEventListener("input", function () {
+    const v = Math.max(1, Math.min(8, Number(this.value) || 1));
+    state.people = v;
+    renderAll();
+  });
+  monthsEl.addEventListener("input", function () {
+    const v = Math.max(1, Math.min(6, Number(this.value) || 1));
+    state.months = v;
+    renderAll();
+  });
+  document.querySelectorAll('#svc-mock input[data-flag]').forEach(function (box) {
+    box.addEventListener("change", function () {
+      state.flags[this.dataset.flag] = this.checked;
+      renderAll();
+    });
+  });
+  document.querySelectorAll("#svc-mode button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      state.mode = this.dataset.mode;
+      document.querySelectorAll("#svc-mode button").forEach(function (o) {
+        o.setAttribute("aria-pressed", o === b ? "true" : "false");
+      });
+      renderAll();
+    });
+  });
+
+  renderAll();
+})();
+</script>

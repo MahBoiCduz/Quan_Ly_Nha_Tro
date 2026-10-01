@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatVND, formatDate } from "@/lib/format";
 import type { LineItem } from "@/lib/billing";
-import { billStatusFor } from "@/lib/billing";
+import { billStatusFor, monthsOrOne } from "@/lib/billing";
 import { BackLink } from "@/components/back-link";
 import { InvoiceExportMenu } from "@/components/invoice-export-menu";
 import { recordPayment } from "./payment-actions";
@@ -55,7 +55,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
       </p>
 
       <div className="card overflow-x-auto">
-        <table className="w-full min-w-[480px] text-sm">
+        <table className="w-full min-w-[560px] text-sm">
           {/* Line items section — hidden for elec_water bills */}
           {bill.type !== "elec_water" && (
             <>
@@ -64,6 +64,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
                   <th className="border-b border-line px-3 py-2 text-left text-sm">Dịch vụ</th>
                   <th className="border-b border-line px-3 py-2 text-sm">ĐVT</th>
                   <th className="border-b border-line px-3 py-2 text-sm">SL</th>
+                  <th className="border-b border-line px-3 py-2 text-sm">Số tháng</th>
                   <th className="border-b border-line px-3 py-2 text-right text-sm">Đơn giá</th>
                   <th className="border-b border-line px-3 py-2 text-right text-sm">Thành tiền</th>
                 </tr>
@@ -74,12 +75,15 @@ export default async function BillDetailPage({ params }: { params: { id: string 
                     <td className="px-3 py-2 text-ink">{it.name}</td>
                     <td className="px-3 py-2 text-center text-ink">{it.measureUnit}</td>
                     <td className="px-3 py-2 text-center text-ink">{it.quantity}</td>
+                    {/* Old bills were created when quantity itself counted the
+                        months, so they carry no `months` → show a dash. */}
+                    <td className="px-3 py-2 text-center text-ink">{monthsOrOne(it.months) > 1 ? monthsOrOne(it.months) : "—"}</td>
                     <td className="px-3 py-2 text-right text-ink">{formatVND(it.unitPrice)}</td>
                     <td className="px-3 py-2 text-right text-ink">{formatVND(it.total)}</td>
                   </tr>
                 ))}
                 <tr className="border-b border-line font-semibold">
-                  <td className="px-3 py-2 text-ink" colSpan={4}>Tổng tiền nhà và DV (trừ điện, nước)</td>
+                  <td className="px-3 py-2 text-ink" colSpan={5}>Tổng tiền nhà và DV (trừ điện, nước)</td>
                   <td className="px-3 py-2 text-right text-ink">{formatVND(bill.subtotal)}</td>
                 </tr>
               </tbody>
@@ -89,7 +93,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           {bill.type !== "room" && (
             <tbody>
               <tr className="border-b border-line">
-                <td className="px-3 py-2 text-ink" colSpan={4}>
+                <td className="px-3 py-2 text-ink" colSpan={5}>
                   Tiền điện
                   {bill.electricityNew != null && bill.electricityOld != null && (
                     <span className="text-muted">
@@ -106,7 +110,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           {bill.type !== "room" && (
             <tbody>
               <tr className="border-b border-line">
-                <td className="px-3 py-2 text-ink" colSpan={4}>
+                <td className="px-3 py-2 text-ink" colSpan={5}>
                   Tiền nước
                   {bill.waterNew != null && bill.waterOld != null && (
                     <span className="text-muted">
@@ -122,7 +126,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           {/* Grand total — always shown */}
           <tfoot>
             <tr className="font-bold">
-              <td className="px-3 py-2 text-ink" colSpan={4}>Tổng cộng</td>
+              <td className="px-3 py-2 text-ink" colSpan={5}>Tổng cộng</td>
               <td className="px-3 py-2 text-right text-ink">{formatVND(bill.grandTotal)}</td>
             </tr>
           </tfoot>

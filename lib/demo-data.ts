@@ -15,7 +15,6 @@ import {
   computeGrandTotal,
   computeMeterAmount,
   computeSubtotal,
-  lineTotal,
   normalizeLineItems,
   type LineItem,
 } from "./billing";
@@ -35,9 +34,11 @@ export const ROOM_RENTS: Record<number, number> = {
 
 /** Services attached to every demo room (defaultPrice in VND). */
 export const DEMO_SERVICES: DemoService[] = [
-  { name: "Internet", measureUnit: "phòng", defaultPrice: 100_000 },
-  { name: "Dịch vụ chung", measureUnit: "phòng", defaultPrice: 50_000 },
-  { name: "Xe máy", measureUnit: "xe", defaultPrice: 60_000 },
+  { name: "Internet", measureUnit: "phòng", defaultPrice: 100_000, defaultQuantity: 1 },
+  // Charged per resident so the demo shows a quantity that follows the room.
+  { name: "Dịch vụ chung", measureUnit: "người", defaultPrice: 50_000, perPerson: true },
+  // Motorbikes are counted per room — the room's own count is folded in below.
+  { name: "Xe máy", measureUnit: "xe", defaultPrice: 60_000, defaultQuantity: 1 },
 ];
 
 export const DEMO_DEFAULT_PROFILE_ID = "default_profile";
@@ -70,6 +71,10 @@ export type DemoService = {
   name: string;
   measureUnit: string;
   defaultPrice: number;
+  /** Quantity is the number of residents in the room (see `defaultQuantity` otherwise). */
+  perPerson?: boolean;
+  /** Fixed quantity for one month when `perPerson` is false. */
+  defaultQuantity?: number;
 };
 
 export type DemoPayment = {
@@ -360,20 +365,22 @@ function buildBill(
   type: DemoBillType,
   services: DemoService[],
   agreedRent: number,
+  occupancy: number,
   vehicleCount: number,
   electricityOld: number,
   electricityNew: number,
   waterOld: number,
   waterNew: number,
 ): Omit<DemoBill, "periodLabel" | "dueDate" | "status" | "payments" | "billingProfileId"> {
-  const base = buildDefaultLineItems(services, agreedRent);
-  // "Xe máy" is the last service row — give this room 1 or 2 motorbikes.
-  const rows = base.map((item) =>
-    item.measureUnit === "xe"
-      ? { ...item, quantity: vehicleCount, total: lineTotal(vehicleCount, item.unitPrice) }
-      : item,
+  // "Xe máy" is counted per room (not per resident): fold this room's own count
+  // into the service so buildDefaultLineItems works out quantity and total.
+  const roomServices = services.map((service) =>
+    service.measureUnit === "xe" ? { ...service, defaultQuantity: vehicleCount } : service,
   );
-  const lineItems = type === "elec_water" ? [] : normalizeLineItems(rows);
+  const lineItems =
+    type === "elec_water"
+      ? []
+      : normalizeLineItems(buildDefaultLineItems(roomServices, agreedRent, 1, occupancy));
   const subtotal = type === "elec_water" ? 0 : computeSubtotal(lineItems);
   const electricityAmount =
     type === "room" ? 0 : computeMeterAmount(electricityOld, electricityNew, ELECTRICITY_RATE);
@@ -407,6 +414,8 @@ function buildLease(
   // Rooms 0, 3, 6, 9 have a spouse sharing the lease (co-tenant).
   const hasCoTenant = index % 3 === 0;
   const coTenants = hasCoTenant ? [demoTenant(index + 20, rng)] : [];
+  // Everyone living in the room: the main tenant plus the co-tenants.
+  const occupancy = 1 + coTenants.length;
   const startDate = atNoon(today.getFullYear(), today.getMonth() - intBetween(rng, 2, 8), 1);
   const type = billTypeForIndex(index);
   const vehicleCount = rng() < 0.4 ? 2 : 1;
@@ -430,6 +439,7 @@ function buildLease(
       type,
       DEMO_SERVICES,
       room.baseRent,
+      occupancy,
       vehicleCount,
       electricityOld,
       electricityNew,

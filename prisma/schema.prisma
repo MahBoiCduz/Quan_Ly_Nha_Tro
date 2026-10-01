@@ -58,12 +58,16 @@ model BillingProfile {
 }
 
 model ServiceItem {
-  id           String  @id @default(cuid())
-  unit         Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
-  unitId       String
-  name         String
-  measureUnit  String
-  defaultPrice Int
+  id              String  @id @default(cuid())
+  unit            Unit    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  unitId          String
+  name            String
+  measureUnit     String
+  defaultPrice    Int
+  // Giá × số người ở (1 người thuê chính + khách ở chung) thay vì số lượng cố định.
+  perPerson       Boolean @default(false)
+  // Số lượng dùng khi perPerson = false (ví dụ số xe máy); 0 = không sinh dòng hoá đơn.
+  defaultQuantity Int     @default(1)
 
   @@index([unitId])
 }

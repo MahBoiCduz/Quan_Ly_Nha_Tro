@@ -164,8 +164,12 @@ khác nhau (ví dụ tài khoản của một đồng sở hữu).
 | name | String | ví dụ "Internet", "Dịch vụ chung" |
 | measureUnit | String | đơn vị tính: "phòng", "người", "xe"… |
 | defaultPrice | Int | đơn giá mặc định |
+| perPerson | Boolean | mặc định `false`; `true` ⇒ số lượng lấy theo số người ở của phòng |
+| defaultQuantity | Int | mặc định `1`; số lượng cố định cho 1 kỳ khi `perPerson = false`; `0` ⇒ không sinh dòng |
 
-Tự động nạp vào hoá đơn khi tạo bill.
+Tự động nạp vào hoá đơn khi tạo bill. Số người ở = 1 người thuê chính (`Lease.tenantId`)
++ số khách ở chung (`Tenant.coLeaseId`), **không** lưu trên `ServiceItem`/`Unit`.
+`defaultQuantity` chỉ ảnh hưởng hoá đơn tạo mới — hoá đơn đã tạo giữ nguyên ảnh chụp.
 
 #### Tenant — Khách thuê
 | Trường | Kiểu | Ghi chú |
@@ -211,7 +215,7 @@ Quan hệ: N–1 `Unit`, N–1 `Tenant` (đại diện), 1–N `Tenant` (ngườ
 | periodLabel | String | ví dụ "Tháng 6/2026" |
 | dueDate | DateTime | hạn thanh toán |
 | status | String | `unpaid` \| `paid` \| `overdue`, mặc định `unpaid` (xem §6.1) |
-| lineItems | Json | mảng `{ name, measureUnit, quantity, unitPrice, total }` — **ảnh chụp** tại thời điểm tạo |
+| lineItems | Json | mảng `{ name, measureUnit, quantity, unitPrice, months?, perPerson?, total }` — **ảnh chụp** tại thời điểm tạo. `months` thiếu ⇒ hiểu là 1 (hoá đơn cũ) |
 | electricityAmount / waterAmount | Int | thành tiền điện / nước |
 | electricityOld / electricityNew | Int? | chỉ số điện cũ/mới (kWh nguyên) |
 | electricityRate | Int? | đơn giá điện |
@@ -324,8 +328,9 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 - Danh sách 16 unit gom theo tầng, có badge trạng thái, tên khách đang thuê,
   giá thuê.
 - Trang chi tiết: thông tin khách đại diện + người ở cùng (CCCD lightbox), hợp
-  đồng, dịch vụ (sửa được), 10 hoá đơn gần nhất; nếu phòng trống → form tạo
-  khách thuê + hợp đồng mới.
+  đồng, dịch vụ (thêm/sửa/xoá được: tên, đơn vị, đơn giá, cờ **"tính theo số
+  người"**, số lượng cố định `defaultQuantity`), 10 hoá đơn gần nhất; nếu phòng
+  trống → form tạo khách thuê + hợp đồng mới.
 - Trang lịch sử: các hợp đồng cũ, mới nhất trước.
 - Tác vụ: bắt đầu hợp đồng (tạo tenant + lease + set `occupied` trong 1
   transaction), kết thúc hợp đồng (set `endDate` + `vacant`), thêm/xoá người ở
@@ -336,12 +341,18 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
   trạng thái (trạng thái hiển thị tính lại lúc đọc — §6.1), badge loại hoá đơn
   (`billTypeLabel`).
 - Tạo hoá đơn cho phòng + kỳ: chọn **loại** (`room` / `elec_water` / `both`),
-  tự nạp dịch vụ, nhập chỉ số điện/nước (đơn giá lấy từ Setting), hỗ trợ **nhiều
-  tháng** (số lượng = số tháng). Xem trước. **Server luôn tính lại**
-  `total = quantity × unitPrice`, `subtotal`, `grandTotal` — không tin client;
-  phần không thuộc loại đã chọn bị ép về 0 và các cột chỉ số lưu `null`.
-- Chi tiết: bảng dịch vụ, dòng điện/nước có diễn giải chỉ số, tổng cộng, danh
-  sách thanh toán, form ghi nhận thanh toán, nút Xuất PDF, nút Sửa, nút Xoá.
+  tự nạp dịch vụ (dòng `perPerson` lấy SL = số người ở, dòng khác lấy
+  `defaultQuantity`, SL 0 ⇒ bỏ dòng), nhập chỉ số điện/nước (đơn giá lấy từ
+  Setting), có ô **Số tháng tính tiền (N)** áp cho **mọi** dòng kể cả tiền thuê.
+  Xem trước. Bảng có cột Đơn vị / SL / Đơn giá / Số tháng / Thành tiền. **Server
+  luôn tính lại** `total = quantity × unitPrice × (months ?? 1)`, `subtotal`,
+  `grandTotal` — không tin client; phần không thuộc loại đã chọn bị ép về 0 và
+  các cột chỉ số lưu `null`.
+- Chi tiết: bảng dịch vụ (có cột Số tháng, dòng theo số người ghi `(N người)`),
+  dòng điện/nước có diễn giải chỉ số, tổng cộng, danh sách thanh toán, form ghi
+  nhận thanh toán, nút Xuất PDF, nút Sửa, nút Xoá.
+- Hoá đơn **cũ** (JSON không có `months`/`perPerson`) hiển thị và in y như trước,
+  tổng tiền không đổi.
 - **Sửa** (`/hoa-don/[id]/edit`): chỉ khi `status !== "paid"` **và** chưa có
   payment nào; hạn thanh toán được phép ở quá khứ. Sau khi sửa, `status` đặt lại
   `unpaid` và tổng được tính lại.
@@ -484,7 +495,11 @@ quá hạn vẫn mang `status = "unpaid"` trong DB cho tới khi có sự kiện
 (giá trị "overdue" lưu sẵn là **không đáng tin** — xem §7.5).
 
 ### 6.2 Tính tiền
-- `total_dòng = quantity × unitPrice` (server tính lại, không tin client).
+- `total_dòng = quantity × unitPrice × (months ?? 1)` (server tính lại, không tin client).
+- `months` = số tháng hoá đơn tính tiền (dòng snapshot); thiếu/0/âm ⇒ kẹp về 1 nên
+  hoá đơn cũ giữ nguyên số tiền.
+- `quantity` khi tạo hoá đơn = số người ở nếu `ServiceItem.perPerson`, ngược lại
+  `defaultQuantity` (SL 0 ⇒ bỏ dòng); dòng tiền thuê luôn `quantity = 1`.
 - `subtotal = Σ total_dòng` (gồm tiền phòng + dịch vụ, **trừ** điện/nước).
 - `điện/nước = max(0, round((mới − cũ) × đơn_giá))`; chỉ số **chỉ tăng**
   (`mới ≥ cũ`, bắt buộc bởi zod).
@@ -654,6 +669,7 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | 2026-07-04 | `payment_multiple_receipt_images` | `Payment.receiptImages` (Json, backfill từ `receiptImageUrl` rồi drop cột cũ) |
 | 2026-07-10 | `add_bill_type` | `Bill.type` (`room`/`elec_water`/`both`), mặc định `both` |
 | 2026-08-01 | `remove_zalo_notifications` | Drop bảng `NotificationLog`; bỏ `Setting.adminZaloUserId` |
+| 2026-10-01 | `service_item_per_person_quantity` | `ServiceItem.perPerson` (bool, mặc định false), `ServiceItem.defaultQuantity` (int, mặc định 1) |
 
 > Thứ tự áp dụng: local `npx prisma db push`; production đẩy từng migration bằng
 > `node scripts/push-turso-schema.mjs <tên-thư-mục>` (xem NFR-4 và `DEPLOY.md`).

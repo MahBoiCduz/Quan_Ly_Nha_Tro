@@ -40,6 +40,7 @@ Bills are the core domain object. Key design decisions:
 - **Edit guard:** Bills can only be edited when `status !== "paid"` AND `payments.length === 0`. Once money is recorded, the bill is immutable. `app/(app)/hoa-don/bill-actions.ts` enforces this server-side. Deleting is blocked only for `paid` bills; deleting an unpaid bill also deletes its payments in one `$transaction`.
 - **Status on read:** `billStatusFor()` compares Vietnam dates with `>=`, so a bill counts as overdue from its due date onward. List/detail/dashboard recompute the display status at read time because the stored `status` column is only written on create/update/payment.
 - **All totals recomputed server-side** via pure functions in `lib/billing.ts` — client-submitted totals are never trusted.
+- **Two quantity axes:** `lineItems[].quantity` is the per-unit count (residents, motorbikes, or 1 for rent) and `lineItems[].months` is how many months the bill covers. `total = quantity × unitPrice × (months ?? 1)`, always recomputed by `normalizeLineItems()` through `lineAmount()`/`monthsOrOne()`. `ServiceItem.perPerson` makes the quantity follow the room's occupancy (primary tenant + co-tenants, `1 + coTenants.length`), `ServiceItem.defaultQuantity` covers fixed counts (a quantity of 0 drops the row). `months` is **optional** in `lineItemSchema` and clamped to 1 when missing/0/negative, so bills created before 2026-10 keep their exact totals and the printed PDF just leaves the months cell empty.
 - **Bill types:** Each bill has a `type` column: `"room"` (rent+services only), `"elec_water"` (meter readings only), or `"both"` (combined — default). The form at `/hoa-don/new` has a pill-toggle to select type. Sections are conditionally shown/hidden in the form, detail page, and PDF. Zod schemas enforce type-specific rules (line items required for room/both; meter checks only for elec_water/both). Meter fields are nullable — stored as `null` for room-type bills.
 
 ### BillingProfile & Setting
@@ -53,7 +54,7 @@ Bills are the core domain object. Key design decisions:
 
 ### Co-tenants
 
-A lease has one primary tenant (the billing contact) and zero or more co-tenants via `Tenant.coLeaseId`. Co-tenants share the same lease but are not individually billed.
+A lease has one primary tenant (the billing contact) and zero or more co-tenants via `Tenant.coLeaseId`. Co-tenants share the same lease but are not individually billed. Occupancy (`1 + coTenants.length`) is the quantity used by services flagged `perPerson` when a bill is created — it is derived at read time and never stored on `Unit`/`ServiceItem`.
 
 ### Ledger
 

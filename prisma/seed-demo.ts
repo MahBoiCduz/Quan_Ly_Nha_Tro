@@ -118,6 +118,8 @@ async function main() {
           name: service.name,
           measureUnit: service.measureUnit,
           defaultPrice: service.defaultPrice,
+          perPerson: service.perPerson ?? false,
+          defaultQuantity: service.defaultQuantity ?? 1,
         },
       });
     }

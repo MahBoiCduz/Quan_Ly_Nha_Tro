@@ -4,15 +4,24 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { formatVND } from "@/lib/format";
-import { computeMeterAmount, buildDefaultLineItems } from "@/lib/billing";
+import { computeMeterAmount, buildDefaultLineItems, lineAmount } from "@/lib/billing";
 import type { LineItem } from "@/lib/billing";
 import { generateBill, updateBill } from "./bill-actions";
 
-type Service = { name: string; measureUnit: string; defaultPrice: number };
-type Unit = { id: string; name: string; billingProfileId: string | null; agreedRent: number; services: Service[] };
+type Service = { name: string; measureUnit: string; defaultPrice: number; perPerson: boolean; defaultQuantity: number };
+type Unit = { id: string; name: string; billingProfileId: string | null; agreedRent: number; occupancy: number; services: Service[] };
 type Profile = { id: string; name: string };
 type Readings = Record<string, { elec: number; water: number }>;
-type Row = { name: string; measureUnit: string; unitPrice: number; quantity: number };
+type Row = {
+  name: string;
+  measureUnit: string;
+  unitPrice: number;
+  quantity: number;
+  /** Months charged for this line — the second axis, next to quantity. */
+  months?: number;
+  /** Quantity comes from the room's occupancy (per-person service). */
+  perPerson?: boolean;
+};
 
 // Pre-filled values for edit mode (line items come from the bill's frozen snapshot).
 export type BillInitialValues = {
@@ -65,11 +74,13 @@ const TYPE_OPTIONS: { key: BillType; label: string }[] = [
 
 function rowsForUnit(u: Unit | undefined, months: number): Row[] {
   if (!u) return [];
-  return buildDefaultLineItems(u.services, u.agreedRent, months).map((li) => ({
+  return buildDefaultLineItems(u.services, u.agreedRent, months, u.occupancy).map((li) => ({
     name: li.name,
     measureUnit: li.measureUnit,
     unitPrice: li.unitPrice,
     quantity: li.quantity,
+    months: li.months,
+    perPerson: li.perPerson,
   }));
 }
 
@@ -79,6 +90,8 @@ function rowsFromLineItems(items: LineItem[]): Row[] {
     measureUnit: li.measureUnit,
     unitPrice: li.unitPrice,
     quantity: li.quantity,
+    months: li.months,
+    perPerson: li.perPerson,
   }));
 }
 
@@ -146,17 +159,19 @@ export function GenerateForm(props: Props) {
   function onMonthsChange(v: string) {
     setMonths(v);
     const m = Math.max(1, Number(v) || 1);
-    setRows((rs) => rs.map((r) => ({ ...r, quantity: m })));
+    // Months are their own axis: they scale every rent/service line but must
+    // never overwrite the quantity (occupants, motorbikes, rooms…).
+    setRows((rs) => rs.map((r) => ({ ...r, months: m })));
   }
 
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const addRow = () =>
-    setRows((rs) => [...rs, { name: "", measureUnit: "", unitPrice: 0, quantity: isEdit ? 1 : monthsNum }]);
+    setRows((rs) => [...rs, { name: "", measureUnit: "", unitPrice: 0, quantity: 1, months: isEdit ? 1 : monthsNum }]);
   const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
 
   const validRows = rows.filter((r) => r.name.trim() !== "");
-  const subtotal = validRows.reduce((s, r) => s + r.unitPrice * r.quantity, 0);
+  const subtotal = validRows.reduce((s, r) => s + lineAmount(r.quantity, r.unitPrice, r.months), 0);
   const elecAmount = computeMeterAmount(Number(elecOld || 0), Number(elecNew || 0), Number(elecRate || 0));
   const waterAmount = computeMeterAmount(Number(waterOld || 0), Number(waterNew || 0), Number(waterRate || 0));
 
@@ -274,12 +289,14 @@ export function GenerateForm(props: Props) {
         <fieldset className="card space-y-2 p-4">
           <legend className="px-1 text-sm font-medium text-muted">Tiền phòng & dịch vụ</legend>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[440px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="text-xs text-muted">
                   <th className="py-1 text-left font-medium">Tên dịch vụ</th>
+                  <th className="w-16 py-1 text-center font-medium">Đơn vị</th>
                   <th className="w-28 py-1 text-right font-medium">Đơn giá</th>
-                  <th className="w-16 py-1 text-center font-medium">Số lượng</th>
+                  <th className="w-16 py-1 text-center font-medium">SL</th>
+                  <th className="w-20 py-1 text-center font-medium">Số tháng</th>
                   <th className="w-28 py-1 text-right font-medium">Thành tiền</th>
                   <th className="w-8 py-1"></th>
                 </tr>
@@ -288,15 +305,24 @@ export function GenerateForm(props: Props) {
                 {rows.map((r, i) => (
                   <tr key={i}>
                     <td className="py-1 pr-2">
-                      <input className="input" placeholder="Tên dịch vụ" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })} />
+                      <div className="flex items-center gap-2">
+                        <input className="input" placeholder="Tên dịch vụ" value={r.name} onChange={(e) => updateRow(i, { name: e.target.value })} />
+                        {r.perPerson && (
+                          <span className="whitespace-nowrap rounded-full bg-cream px-2 py-0.5 text-xs text-muted">theo số người</span>
+                        )}
+                      </div>
                     </td>
+                    <td className="py-1 pr-2 text-center text-xs text-muted">{r.measureUnit}</td>
                     <td className="py-1 pr-2">
                       <input type="number" min="0" className="input text-right" value={r.unitPrice} onChange={(e) => updateRow(i, { unitPrice: Number(e.target.value) || 0 })} />
                     </td>
                     <td className="py-1 pr-2">
                       <input type="number" min="0" step="any" className="input text-center" value={r.quantity} onChange={(e) => updateRow(i, { quantity: Number(e.target.value) || 0 })} />
                     </td>
-                    <td className="py-1 pr-2 text-right text-ink">{formatVND(r.unitPrice * r.quantity)}</td>
+                    <td className="py-1 pr-2">
+                      <input type="number" min="1" className="input text-center" value={r.months ?? 1} onChange={(e) => updateRow(i, { months: Number(e.target.value) })} />
+                    </td>
+                    <td className="py-1 pr-2 text-right text-ink">{formatVND(lineAmount(r.quantity, r.unitPrice, r.months))}</td>
                     <td className="py-1 text-center">
                       <button type="button" onClick={() => removeRow(i)} className="text-danger" aria-label="Xóa dòng">
                         <Trash2 size={16} />
@@ -306,7 +332,7 @@ export function GenerateForm(props: Props) {
                 ))}
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="py-2 text-center text-muted">
+                    <td colSpan={7} className="py-2 text-center text-muted">
                       {isEdit ? "Chưa có dòng nào." : "Chọn phòng để tự điền tiền phòng + dịch vụ."}
                     </td>
                   </tr>
@@ -314,6 +340,9 @@ export function GenerateForm(props: Props) {
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-muted">
+            Thành tiền = SL × đơn giá × số tháng. Điện nước không dùng cột này (tính theo chỉ số).
+          </p>
           <div className="flex items-center justify-between">
             <button type="button" onClick={addRow} className="btn-secondary inline-flex items-center gap-1 text-sm">
               <Plus size={16} /> Thêm dòng

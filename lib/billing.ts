@@ -1,8 +1,18 @@
 export type LineItem = {
   name: string;
   measureUnit: string;
+  /** Quantity in the line's own unit: occupants, motorbikes, kWh, m³, rooms… */
   quantity: number;
   unitPrice: number;
+  /**
+   * How many months this line is charged for. Rent and services carry it so the
+   * printed bill can show "quantity (units)" and "months" as two columns.
+   * Bills created before this field existed have no `months`: always read it
+   * through `monthsOrOne`, never directly.
+   */
+  months?: number;
+  /** True when `quantity` is the room's occupancy (a per-person service). */
+  perPerson?: boolean;
   total: number;
 };
 
@@ -10,40 +20,89 @@ export function lineTotal(quantity: number, unitPrice: number): number {
   return quantity * unitPrice;
 }
 
+/** Months of a line item: missing, 0, negative or NaN ⇒ 1 (legacy bills). */
+export function monthsOrOne(months?: number): number {
+  if (typeof months !== "number" || !Number.isFinite(months) || months < 1) return 1;
+  return Math.trunc(months);
+}
+
+/** A line's amount = quantity (units) × unitPrice × months. */
+export function lineAmount(quantity: number, unitPrice: number, months?: number): number {
+  return lineTotal(quantity * monthsOrOne(months), unitPrice);
+}
+
+/**
+ * Rows for a newly generated bill. Per-person services bill every occupant
+ * (`occupancy`), other services bill the room's own `defaultQuantity` — a
+ * service whose quantity works out to 0 is dropped, so a room with no motorbike
+ * never prints a 0 ₫ line. Months live in their own axis (`months`), which is
+ * why the rent line is quantity 1 × months instead of quantity = months.
+ */
 export function buildDefaultLineItems(
-  services: { name: string; measureUnit: string; defaultPrice: number }[],
+  services: {
+    name: string;
+    measureUnit: string;
+    defaultPrice: number;
+    perPerson?: boolean;
+    defaultQuantity?: number;
+  }[],
   agreedRent: number,
   months = 1,
+  occupancy = 1,
 ): LineItem[] {
-  const items: LineItem[] = services.map((s) => ({
-    name: s.name,
-    measureUnit: s.measureUnit,
-    quantity: months,
-    unitPrice: s.defaultPrice,
-    total: lineTotal(months, s.defaultPrice),
-  }));
+  const n = monthsOrOne(months);
+  const people = Math.max(1, Math.trunc(occupancy) || 1);
+  const items: LineItem[] = [];
+  for (const s of services) {
+    const quantity = s.perPerson ? people : (s.defaultQuantity ?? 1);
+    if (quantity <= 0) continue;
+    items.push({
+      name: s.name,
+      measureUnit: s.measureUnit,
+      quantity,
+      unitPrice: s.defaultPrice,
+      months: n,
+      perPerson: s.perPerson || undefined,
+      total: lineAmount(quantity, s.defaultPrice, n),
+    });
+  }
   items.push({
     name: "Tiền thuê phòng",
     measureUnit: "phòng",
-    quantity: months,
+    quantity: 1,
     unitPrice: agreedRent,
-    total: lineTotal(months, agreedRent),
+    months: n,
+    total: lineAmount(1, agreedRent, n),
   });
   return items;
 }
 
-// Recompute each line's total from quantity × unitPrice — the server's source of
-// truth for the editable bill table (client-sent totals are never trusted).
+// Recompute each line's total from quantity × unitPrice × months — the server's
+// source of truth for the editable bill table (client-sent totals are never
+// trusted). A legacy row without `months` keeps its old amount: quantity was
+// then measured in months.
 export function normalizeLineItems(
-  items: { name: string; measureUnit?: string; unitPrice: number; quantity: number }[],
+  items: {
+    name: string;
+    measureUnit?: string;
+    unitPrice: number;
+    quantity: number;
+    months?: number;
+    perPerson?: boolean;
+  }[],
 ): LineItem[] {
-  return items.map((i) => ({
-    name: i.name,
-    measureUnit: i.measureUnit ?? "",
-    quantity: i.quantity,
-    unitPrice: i.unitPrice,
-    total: lineTotal(i.quantity, i.unitPrice),
-  }));
+  return items.map((i) => {
+    const months = monthsOrOne(i.months);
+    return {
+      name: i.name,
+      measureUnit: i.measureUnit ?? "",
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      months,
+      perPerson: i.perPerson || undefined,
+      total: lineAmount(i.quantity, i.unitPrice, months),
+    };
+  });
 }
 
 export function computeSubtotal(items: LineItem[]): number {

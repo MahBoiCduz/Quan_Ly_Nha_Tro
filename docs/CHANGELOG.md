@@ -7,7 +7,34 @@
 
 ---
 
-## 2026-09-14 — Xuất hoá đơn theo lô (chọn nhiều → ZIP / lưu vào thư mục)
+## 2026-10-01 — Giá dịch vụ theo số người + tách trục Số lượng / Số tháng
+
+**Trước:** dòng hoá đơn chỉ có **1 trục số lượng**: chọn "Số tháng" N thì `quantity = N`
+cho **mọi** dòng (`generate-form.tsx:149`), nên không thể vừa thu tiền phòng theo N
+tháng vừa thu dịch vụ theo đầu người / số xe. Các dịch vụ như "Dịch vụ chung" buộc phải
+thu bình quân theo phòng.
+
+**Sau:**
+- `ServiceItem` thêm `perPerson` (bool, mặc định `false`) và `defaultQuantity` (int, mặc
+  định `1`) — migration `20261001000000_service_item_per_person_quantity`. Bật cờ ở trang
+  phòng ⇒ số lượng lấy theo **số người ở** (1 người thuê chính + khách ở chung), ô Số
+  lượng bị vô hiệu hoá kèm ghi chú; tắt cờ ⇒ dùng `defaultQuantity` (ví dụ Xe máy = 2).
+- Hoá đơn tách **2 trục**: `SL` (số người / số xe / 1 cho dòng tiền thuê) × **Đơn giá** ×
+  **Số tháng N**; `months` được snapshot vào từng dòng. Dòng có SL = 0 bị bỏ khỏi hoá đơn.
+- Bảng tạo hoá đơn, trang chi tiết hoá đơn và PDF/PNG đều thêm cột **Đơn vị** + **Số
+  tháng**; dòng theo số người có nhãn `(4 người)`. Lọc/xuất theo lô không đổi.
+- Hoá đơn cũ (JSON không có `months`/`perPerson`) hiển thị và in y như trước, **tổng tiền
+  không đổi một đồng**.
+
+**Quyết định đáng ghi:** `months` là trường **optional** trong `lineItemSchema` và giá
+trị thiếu/0/âm được kẹp về 1 bằng `monthsOrOne()` (không chặn ở zod) — nhờ vậy dữ liệu
+lịch sử không phải backfill và không có nguy cơ đổi số tiền đã thu. Số người **không**
+lưu trên `ServiceItem`/`Unit` mà suy ra từ `Lease.tenantId` + `Tenant.coLeaseId`.
+
+**Spec:** `docs/specs/2026-10-01-gia-dich-vu-theo-so-nguoi.md`.
+
+---
+
 
 **Trước:** mỗi hoá đơn phải mở ra và xuất ảnh riêng; cuối tháng lập hoá đơn cho 13
 phòng thì phải làm 13 lần.

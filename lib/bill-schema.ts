@@ -12,6 +12,12 @@ const lineItemSchema = z.object({
   measureUnit: z.string().optional().default(""),
   unitPrice: z.number().min(0),
   quantity: z.number().min(0),
+  // Months are a separate axis from quantity (rent: 1 room × N months; a
+  // per-person service: 4 people × N months). Zod strips undeclared keys, so
+  // without these two the values would silently vanish before normalizeLineItems.
+  // Out-of-range months are clamped to 1 there rather than rejected here.
+  months: z.number().optional(),
+  perPerson: z.boolean().optional(),
 });
 
 // Shared base shape: fields that both generate and update accept.

@@ -94,7 +94,7 @@ describe("demo bills", () => {
       expect(bill.subtotal).toBeGreaterThanOrEqual(0);
       expect(bill.grandTotal).toBeGreaterThan(0);
       for (const item of bill.lineItems) {
-        expect(item.total).toBe(item.quantity * item.unitPrice);
+        expect(item.total).toBe(item.quantity * item.unitPrice * (item.months ?? 1));
         expect(Number.isInteger(item.total)).toBe(true);
       }
       for (const payment of bill.payments) {
@@ -102,6 +102,37 @@ describe("demo bills", () => {
         expect(payment.amount).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("charges the shared service per resident and motorbikes per room", () => {
+    const sharedQuantities: number[] = [];
+    for (const lease of dataset.leases) {
+      const occupancy = 1 + lease.coTenants.length;
+      const vehiclesPerBill: number[] = [];
+
+      for (const bill of lease.bills.filter((b) => b.type !== "elec_water")) {
+        const sharedRow = bill.lineItems.find((i) => i.measureUnit === "người");
+        // Per-person rows follow the number of residents in the room.
+        expect(sharedRow?.quantity).toBe(occupancy);
+        expect(sharedRow?.months).toBe(1);
+        sharedQuantities.push(sharedRow?.quantity ?? 0);
+
+        // Motorbikes stay a per-room count (1 or 2), never the occupancy.
+        const vehicleRow = bill.lineItems.find((i) => i.measureUnit === "xe");
+        expect([1, 2]).toContain(vehicleRow?.quantity);
+        vehiclesPerBill.push(vehicleRow?.quantity ?? 0);
+
+        // Fixed-price rows keep their own quantity.
+        expect(bill.lineItems.find((i) => i.name === "Internet")?.quantity).toBe(1);
+      }
+      // The room keeps the same motorbike count across its months (the
+      // electricity/water-only room has no line items at all).
+      if (vehiclesPerBill.length > 0) {
+        expect(new Set(vehiclesPerBill).size).toBe(1);
+      }
+    }
+    expect(sharedQuantities.some((q) => q === 2)).toBe(true);
+    expect(sharedQuantities.some((q) => q === 1)).toBe(true);
   });
 
   it("stores null readings and zero utilities for room-only bills", () => {
