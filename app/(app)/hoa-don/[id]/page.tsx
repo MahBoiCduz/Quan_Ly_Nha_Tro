@@ -28,6 +28,14 @@ export default async function BillDetailPage({ params }: { params: { id: string 
   const items = bill.lineItems as unknown as LineItem[];
   const paid = bill.payments.reduce((s, p) => s + p.amount, 0);
   const display = billStatusFor(bill.grandTotal, paid, bill.dueDate);
+  if (process.env.VERCEL === "1") {
+    console.info("[bill-render]", JSON.stringify({
+      deployment: process.env.VERCEL_URL,
+      billId: bill.id,
+      updatedAt: bill.updatedAt.toISOString(),
+      status: display,
+    }));
+  }
   const badgeClass =
     display === "overdue" ? "badge-danger" :
     display === "paid" ? "badge-ok" :
