@@ -229,6 +229,14 @@ Quan hệ: N–1 `Unit`, N–1 `Tenant` (đại diện), 1–N `Tenant` (ngườ
 Các cột chỉ số điện/nước **nullable** để tương thích hoá đơn cũ/nhập tay chỉ có
 thành tiền.
 
+#### BillTrackingPeriod — Kỳ tracking của hoá đơn
+
+`id`, `billId` (FK → Bill, cascade khi xoá), `leaseId` (FK → Lease), `month`
+(`YYYY-MM`), `category` (`room` / `elec_water`). Unique `(leaseId, month, category)`;
+index theo `month` và `billId`. Kỳ phòng và điện/nước độc lập, hỗ trợ qua năm.
+Không lưu thêm trạng thái thanh toán; suy từ tổng Payment của Bill. Hoá đơn cũ
+chưa gán kỳ vẫn giữ nguyên tiền và nội dung in.
+
 #### Payment — Lần thu tiền
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
@@ -304,7 +312,8 @@ Tự động chảy vào cột "Chi" của sổ sách.
 | MaintenanceSchedule → Unit | SetNull | xoá phòng ⇒ lịch chuyển về phạm vi toà nhà |
 | Lease → Unit / Tenant | Restrict (mặc định) | không cho xoá khi còn hợp đồng |
 | Bill → Lease | Restrict | |
-| Payment → Bill | Restrict | `deleteBill` **tự xoá payment trước** trong 1 transaction (chỉ với hoá đơn chưa `paid`) |
+| Payment → Bill | Restrict | Chặn xoá Bill nếu có bất kỳ Payment, không xoá lịch sử thu |
+| BillTrackingPeriod → Bill | Cascade | Xoá kỳ cùng Bill chưa có thanh toán |
 
 ---
 
@@ -343,8 +352,9 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 - Tạo hoá đơn cho phòng + kỳ: chọn **loại** (`room` / `elec_water` / `both`),
   tự nạp dịch vụ (dòng `perPerson` lấy SL = số người ở, dòng khác lấy
   `defaultQuantity`, SL 0 ⇒ bỏ dòng), nhập chỉ số điện/nước (đơn giá lấy từ
-  Setting), có ô **Số tháng tính tiền (N)** áp cho **mọi** dòng kể cả tiền thuê.
-  Xem trước. Bảng có cột Đơn vị / SL / Đơn giá / Số tháng / Thành tiền. **Server
+  Setting), chọn **các tháng tiền phòng** làm số tháng mặc định cho mỗi dòng.
+  Dòng đã chỉnh số tháng riêng không bị ghi đè; SL vẫn độc lập. Đơn vị / số tháng
+  từng dòng chỉnh trong phần mở rộng. **Server
   luôn tính lại** `total = quantity × unitPrice × (months ?? 1)`, `subtotal`,
   `grandTotal` — không tin client; phần không thuộc loại đã chọn bị ép về 0 và
   các cột chỉ số lưu `null`.
@@ -356,21 +366,44 @@ Chi tiêu · Bảo trì · Người dùng · Cài đặt.
 - **Sửa** (`/hoa-don/[id]/edit`): chỉ khi `status !== "paid"` **và** chưa có
   payment nào; hạn thanh toán được phép ở quá khứ. Sau khi sửa, `status` đặt lại
   `unpaid` và tổng được tính lại.
-- Xoá hoá đơn: chặn nếu đã `paid`; nếu chưa, xoá payment trước rồi xoá bill
-  (1 transaction).
+- Xoá hoá đơn: chặn nếu đã `paid` hoặc có bất kỳ payment nào; xoá Bill chưa có
+  thanh toán cùng kỳ tracking trong transaction, không xoá lịch sử thu tiền.
+- Kỳ tracking bắt buộc cho khoản áp dụng trên Bill mới/sửa; kỳ đã đóng trên Bill
+  khác ẩn khỏi lựa chọn, kỳ chưa trả/đang trả dẫn về Bill cũ. Kiểm tra trùng theo
+  hợp đồng/khoản/tháng ở server và unique DB; loại trừ chính Bill khi sửa.
+- Tháng phòng có thể rời nhau; điện/nước phải liên tiếp, một bộ chỉ số cho toàn kỳ,
+  không nhân số tháng. Kỳ phải giao thời gian hợp đồng; đổi năm giữ lựa chọn.
+- Có action riêng gán metadata kỳ cho Bill cũ (kể cả đã trả), không sửa tiền hoặc
+  title; nhãn mơ hồ/giữa tháng/`both` phải xác nhận. Form cảnh báo Bill chưa gán kỳ.
+- Máy tính ưu tiên nhập liệu, dịch vụ cạnh chỉ số khi đủ rộng; điện thoại ưu tiên
+  xem tổng/đã thu/còn thiếu, chi tiết và form thanh toán thu gọn nhưng admin vẫn mở được.
+
+### FR-3a Tracking thanh toán (`/tracking-thanh-toan`)
+- Ma trận phòng × 12 tháng, chọn năm/lọc tầng/phòng; mỗi ô tách Phòng và Điện/nước.
+- Trạng thái: Chưa có hoá đơn / Chưa đóng / Đang trả / Đã đóng / Không phải thu,
+  kèm quá hạn theo ngày VN. Thu một phần áp dụng cả kỳ; không phân bổ từng khoản.
+- Bấm mở Bill, khách/hợp đồng, tổng/đã thu/còn thiếu; nhiều hợp đồng trong cùng ô
+  được tổng hợp nhưng drill-down giữ từng Bill. Không suy nghĩa vụ từ phòng trống.
+- Cảnh báo/danh sách Bill chưa gán kỳ; không mặc định bảng đầy đủ. Tracker theo
+  kỳ thu, sổ sách vẫn theo ngày thu. Thu thừa không tự chuyển sang tháng khác.
 
 ### FR-4 Xuất hoá đơn — PDF & ảnh PNG (`/hoa-don/[id]/pdf`, nút "Xuất hoá đơn")
+- Bill đã gán tracking hiển thị kỳ riêng của phòng/dịch vụ và điện/nước trên
+  chi tiết/PDF/PNG. Bill chưa gán hiển thị nhãn kỳ đã lưu, không suy đoán kỳ.
 - **PDF** (`/hoa-don/[id]/pdf`, render server-side bằng `@react-pdf/renderer`): đúng
   mẫu của gia đình — đầu trang (phòng, kỳ, khách, biển số), bảng dịch vụ, bảng
   chỉ số điện/nước 7 cột, tổng (trừ điện/nước), ghi chú, thông tin ngân hàng + ảnh QR.
 - **Thứ tự ưu tiên hồ sơ thanh toán:** `bill.billingProfile` → `unit.billingProfile`
   → hồ sơ mặc định (`BillingProfile{isDefault: true}`). Ảnh QR được nhúng dạng
   data-URL (`qrDataUrl`: đọc file cục bộ trong `uploads/`).
-- **Ảnh PNG:** nút "Xuất hoá đơn" trên trang chi tiết có thêm mục *Ảnh PNG (nét)*.
-  Ảnh được tạo **ngay trên trình duyệt**: tải chính PDF ở trên → `pdfjs-dist` render
-  từng trang lên canvas → `toBlob("image/png")` → tải về. Nhờ vậy ảnh **giống hệt**
-  bản PDF và **không cần server/không thêm thư viện native**.
-  - Kích thước: bề rộng mục tiêu **1654 px** (≈200 DPI với A4 ⇒ 1654×2340 px).
+- **Ảnh PNG:** mục *Ảnh PNG (điện thoại)* dùng mẫu dọc riêng trong
+  `lib/invoice-mobile-pdf.tsx`, chung InvoiceModel với PDF A4. Tổng tiền ở đầu;
+  mỗi khoản có tên/thành tiền, công thức dưới; chỉ số cũ/mới rõ. PNG không có
+  khối thông tin chuyển khoản/QR; ghi chú vẫn hiển thị nếu có.
+  Client tải `/pdf?layout=mobile` → `pdfjs-dist` → canvas → PNG, cắt phần trắng
+  cuối ảnh và chừa lề. Không thêm thư viện native.
+  - Kích thước: bề rộng **1080 px**, chiều cao theo nội dung, chữ khoảng 14–15px
+    khi xem ảnh ở ngang 360px. Hóa đơn nhiều dòng có thể xuất nhiều ảnh.
   - Tên file: `hoa-don-<tên phòng>-<kỳ>.png` (bỏ dấu, space → `-`), nhiều trang thì
     thêm `-trang-N`.
   - Worker của pdf.js được phục vụ tĩnh từ `public/pdf.worker.min.mjs`
@@ -630,6 +663,9 @@ resolve đổi thành `bill.billingProfile ?? unit.billingProfile ?? default`
 không cho xoá hồ sơ mặc định. Bất biến "chỉ một mặc định" enforce ở tầng app.
 
 ### 7.8 [THẤP] Chống hoá đơn trùng kỳ
+> **Cập nhật 2026-10-01:** đã chống trùng cho kỳ tracking bằng unique
+> `(leaseId, month, category)` và kiểm tra transaction, không unique theo nhãn tự do.
+> Bill legacy chưa xác định kỳ vẫn cần đối chiếu/gán thủ công.
 **Vấn đề:** Không có ràng buộc chống tạo hai hoá đơn cùng `(leaseId, periodLabel)`.
 **Đề xuất:** cân nhắc `@@unique([leaseId, periodLabel])` **hoặc** kiểm tra ở
 tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.**
@@ -670,6 +706,7 @@ tầng ứng dụng (an toàn hơn cho chu kỳ "custom"). **Ưu tiên: thấp.*
 | 2026-07-10 | `add_bill_type` | `Bill.type` (`room`/`elec_water`/`both`), mặc định `both` |
 | 2026-08-01 | `remove_zalo_notifications` | Drop bảng `NotificationLog`; bỏ `Setting.adminZaloUserId` |
 | 2026-10-01 | `service_item_per_person_quantity` | `ServiceItem.perPerson` (bool, mặc định false), `ServiceItem.defaultQuantity` (int, mặc định 1) |
+| 2026-10-01 | `bill_tracking_periods` | Kỳ room/elec_water theo Bill/Lease, unique hợp đồng + tháng + khoản |
 
 > Thứ tự áp dụng: local `npx prisma db push`; production đẩy từng migration bằng
 > `node scripts/push-turso-schema.mjs <tên-thư-mục>` (xem NFR-4 và `DEPLOY.md`).

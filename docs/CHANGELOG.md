@@ -7,6 +7,49 @@
 
 ---
 
+## 2026-10-01 — Bỏ thông tin chuyển khoản trên PNG
+
+- Mẫu PNG đơn lẻ/xuất lô bỏ cả khối ngân hàng, tài khoản, nội dung chuyển khoản
+  và QR theo yêu cầu. Giữ các nội dung khác, ghi chú và số tiền. PDF A4 giữ nguyên.
+
+## 2026-10-01 — PNG hóa đơn ưu tiên điện thoại
+
+- PNG rộng 1080px có mẫu dọc riêng: tổng tiền đầu ảnh, tên/thành tiền và công
+  thức từng khoản, khối điện/nước rõ chỉ số cũ/mới, thông tin chuyển khoản/QR cuối.
+- PDF A4 giữ nguyên. Hai bố cục dùng chung InvoiceModel và snapshot tiền.
+- Tải từng hóa đơn và xuất lô đều dùng mẫu mobile; client cắt trắng cuối ảnh,
+  giữ lề. Nội dung dài có thể xuất nhiều ảnh, từng dòng tiền không tách đôi.
+- Spec: [PNG cho điện thoại](specs/2026-10-01-png-hoa-don-cho-dien-thoai.md).
+
+## 2026-10-01 — Thiết kế lại bản xuất hoá đơn
+
+- Mẫu A4 dùng màu trung tính/cam đất của hệ thống, bỏ lưới viền đen dày;
+  phòng/người thuê/hạn thanh toán rõ, tổng tiền nổi bật.
+- Kỳ phòng và kỳ điện/nước đặt trên từng bảng; chỉ số gọi đúng là cũ/mới.
+  SL và số tháng riêng; dòng legacy không có số tháng giữ dấu gạch, không suy lại tiền.
+- Thông tin chuyển khoản và QR đặt cạnh nhau, ghi chú rỗng tự ẩn.
+  `INVOICE_THEME` trong `lib/invoice-pdf.tsx` tập trung cấu hình màu/khoảng cách.
+- PDF, PNG và xuất lô dùng cùng mẫu; không đổi dữ liệu, số tiền hoặc cấu hình ngân hàng.
+- Kiểm chứng render các loại, legacy, nhiều dòng và có QR; mẫu thường 5 dịch vụ
+  + điện/nước + QR vừa một trang. Dòng tiền được giữ nguyên khi ngắt trang.
+
+## 2026-10-01 — Tracking thanh toán theo phòng và tháng
+
+- Thêm `BillTrackingPeriod`, kỳ riêng phòng/dịch vụ và điện/nước, unique theo
+  hợp đồng + khoản + tháng; hỗ trợ qua năm. Server và DB chống lập trùng.
+- Form chọn kỳ hiển thị lịch sử, ẩn tháng đã trả đủ, dẫn kỳ còn thiếu về Bill cũ.
+  Desktop dùng hai cột dịch vụ/chỉ số, số tháng/đơn vị từng dòng chỉnh ở phần mở rộng;
+  mobile chi tiết ưu tiên tổng/đã thu/còn thiếu và nội dung thu gọn.
+- Thêm `/tracking-thanh-toan`, ma trận 12 tháng, lọc phòng/tầng và drill-down Bill.
+  Thu một phần áp dụng cả kỳ, không phân bổ từng tháng; điện/nước chỉ nhận kỳ liên tiếp.
+- Bill cũ chưa có kỳ giữ nguyên tiền/title, có action riêng để gán metadata sau
+  xác nhận. Nhãn mơ hồ/giữa tháng không tự chuyển đổi. PDF/PNG có kỳ riêng khi đã gán.
+- Chặn xoá mọi Bill đã có Payment; bảo vệ snapshot và tách ngày thu khỏi kỳ tracking.
+- Migration additive `20261001010000_bill_tracking_periods`. Demo đã bổ sung kỳ,
+  chừa Phòng 303 làm ví dụ legacy; local migration có backup SQLite, production chưa áp.
+
+**Spec:** [tracking-thanh-toan-theo-thang](specs/2026-10-01-tracking-thanh-toan-theo-thang.md).
+
 ## 2026-10-01 — Giá dịch vụ theo số người + tách trục Số lượng / Số tháng
 
 **Trước:** dòng hoá đơn chỉ có **1 trục số lượng**: chọn "Số tháng" N thì `quantity = N`

@@ -44,5 +44,9 @@ export async function recordPayment(billId: string, formData: FormData) {
 
   revalidatePath(`/hoa-don/${billId}`);
   revalidatePath("/hoa-don");
+  revalidatePath("/tracking-thanh-toan");
+  revalidatePath("/so-sach");
+  revalidatePath("/phong");
+  revalidatePath("/");
   return { ok: true };
 }

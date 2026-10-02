@@ -11,7 +11,7 @@ import {
   zipFileName,
   type BatchBill,
 } from "./invoice-batch";
-import { downloadBlob, fetchInvoicePdf, renderInvoiceImages } from "./invoice-image-client";
+import { downloadBlob, renderMobileInvoiceImages } from "./invoice-image-client";
 
 export type BatchExportMode = "zip" | "folder";
 
@@ -98,8 +98,7 @@ export async function exportInvoiceBatch(options: BatchExportOptions): Promise<B
 
     try {
       if (mode === "folder" && !directory) throw new Error("Chưa chọn thư mục lưu ảnh.");
-      const pdf = await fetchInvoicePdf(bill.id);
-      const images = await renderInvoiceImages(pdf);
+      const images = await renderMobileInvoiceImages(bill.id);
 
       for (const image of images) {
         const name = uniqueFileName(

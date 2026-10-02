@@ -10,6 +10,9 @@ import { recordPayment } from "./payment-actions";
 import { PaymentPanel } from "./payment-panel";
 import { DeleteBillButton } from "./delete-bill-button";
 import { Pencil } from "lucide-react";
+import { formatMonths } from "@/lib/tracking";
+import { TrackingAssignment } from "./tracking-assignment";
+import { ResponsiveDetails } from "@/components/responsive-details";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +21,7 @@ const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã 
 export default async function BillDetailPage({ params }: { params: { id: string } }) {
   const bill = await db.bill.findUnique({
     where: { id: params.id },
-    include: { lease: { include: { unit: true, tenant: true } }, payments: { orderBy: { paidAt: "asc" } } },
+    include: { trackingPeriods: true, lease: { include: { unit: true, tenant: true } }, payments: { orderBy: { paidAt: "asc" } } },
   });
   if (!bill) notFound();
 
@@ -46,7 +49,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
               <Pencil size={18} /> Sửa
             </Link>
           )}
-          <DeleteBillButton billId={bill.id} />
+          {bill.payments.length === 0 && bill.status !== "paid" && <DeleteBillButton billId={bill.id} />}
         </div>
       </div>
       <p className="text-sm text-muted">
@@ -54,6 +57,19 @@ export default async function BillDetailPage({ params }: { params: { id: string 
         Trạng thái: <span className={badgeClass}>{STATUS_LABEL[display]}</span>
       </p>
 
+      <section className="card space-y-3 p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div><p className="text-sm text-muted">Tổng thanh toán</p><p className="text-xl font-semibold">{formatVND(bill.grandTotal)}</p></div>
+          <div><p className="text-sm text-muted">Đã thu</p><p className="font-medium">{formatVND(paid)}</p></div>
+          <div><p className="text-sm text-muted">Còn thiếu · hạn {formatDate(bill.dueDate)}</p><p className="font-medium">{formatVND(Math.max(0, bill.grandTotal - paid))}</p></div>
+        </div>
+        {(["room", "elec_water"] as const).map(category => {
+          const months = bill.trackingPeriods.filter(p => p.category === category).map(p => p.month);
+          return months.length ? <p key={category} className="text-sm">{category === "room" ? "Tiền phòng / dịch vụ" : "Điện/nước"}: Tháng {formatMonths(months)}</p> : null;
+        })}
+      </section>
+      <TrackingAssignment billId={bill.id} unitId={bill.lease.unitId} type={bill.type} periodLabel={bill.periodLabel} periods={bill.trackingPeriods.map(p => ({ month: p.month, category: p.category }))} />
+      <ResponsiveDetails title="Chi tiết dịch vụ và chỉ số">
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
           {/* Line items section — hidden for elec_water bills */}
@@ -132,6 +148,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           </tfoot>
         </table>
       </div>
+      </ResponsiveDetails>
 
       <section>
         <h2 className="mb-2">Đã thanh toán: {formatVND(paid)} / {formatVND(bill.grandTotal)}</h2>
@@ -158,7 +175,9 @@ export default async function BillDetailPage({ params }: { params: { id: string 
           })}
           {bill.payments.length === 0 && <li className="px-4 py-3 text-muted">Chưa có thanh toán.</li>}
         </ul>
-        <PaymentPanel billId={bill.id} remaining={Math.max(0, bill.grandTotal - paid)} action={recordPayment} />
+        {paid < bill.grandTotal && <ResponsiveDetails title="Ghi nhận thanh toán">
+          <PaymentPanel billId={bill.id} remaining={Math.max(0, bill.grandTotal - paid)} action={recordPayment} />
+        </ResponsiveDetails>}
       </section>
     </div>
   );

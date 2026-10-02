@@ -17,14 +17,29 @@ const base = {
 };
 
 describe("buildInvoiceModel", () => {
+  it("keeps independent cross-year periods and original monetary snapshots", () => {
+    const model = buildInvoiceModel({ ...base.bill, trackingPeriods: [
+      { category: "room", month: "2026-11" },
+      { category: "room", month: "2026-12" },
+      { category: "room", month: "2027-01" },
+      { category: "elec_water", month: "2026-10" },
+      { category: "elec_water", month: "2026-11" },
+      { category: "elec_water", month: "2026-12" },
+    ] }, base.lease, base.unit, base.tenant, base.setting);
+    expect(model.roomPeriod).toBe("11+12/2026 và 1/2027");
+    expect(model.utilityPeriod).toBe("10+11+12/2026");
+    expect(model.grandTotal).toBe(base.bill.grandTotal);
+    expect(model.electricityUsage).toBe(150);
+  });
   it("maps header fields from the entities", () => {
-    const m = buildInvoiceModel(base.bill, base.lease, base.unit, base.tenant, base.setting);
+    const m = buildInvoiceModel({ ...base.bill, dueDate: "2026-12-05" }, base.lease, base.unit, base.tenant, base.setting);
     expect(m.unitName).toBe("Phòng 301");
     expect(m.tenantName).toBe("Nguyễn Mạnh Cường");
     expect(m.phone).toBe("0969920947");
     expect(m.depositAmount).toBe(4800000);
     expect(m.rows).toHaveLength(1);
     expect(m.bankAccountNo).toBe("88859988888");
+    expect(m.dueDate).toBe("05/12/2026");
   });
 
   it("maps meter readings and derives usage (new − old)", () => {

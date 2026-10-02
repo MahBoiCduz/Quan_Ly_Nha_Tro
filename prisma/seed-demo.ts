@@ -171,6 +171,14 @@ async function main() {
         data: {
           leaseId: created.id,
           periodLabel: bill.periodLabel,
+          // Keep one room unassigned to exercise legacy reconciliation.
+          ...(lease.roomName === "Phòng 303" ? {} : {
+            trackingPeriods: { createMany: { data: (bill.type === "both" ? ["room", "elec_water"] : [bill.type]).map(category => ({
+              leaseId: created.id,
+              month: bill.periodLabel.replace(/^Tháng (\d{1,2})\/(\d{4})$/, (_match: string, month: string, year: string) => `${year}-${month.padStart(2, "0")}`),
+              category,
+            })) } },
+          }),
           dueDate: bill.dueDate,
           status: bill.status,
           type: bill.type,

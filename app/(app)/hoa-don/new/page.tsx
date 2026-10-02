@@ -46,19 +46,6 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
   });
   const setting = await db.setting.findUnique({ where: { id: "singleton" } });
 
-  // Latest meter readings per unit (from the most recent bill that recorded them)
-  // so the form can pre-fill "số cũ".
-  const lastBills = await db.bill.findMany({
-    where: { electricityNew: { not: null }, lease: { unitId: { in: units.map((u) => u.id) } } },
-    orderBy: { dueDate: "desc" },
-    select: { electricityNew: true, waterNew: true, lease: { select: { unitId: true } } },
-  });
-  const lastReadings: Record<string, { elec: number; water: number }> = {};
-  for (const b of lastBills) {
-    const uid = b.lease.unitId;
-    if (!lastReadings[uid]) lastReadings[uid] = { elec: b.electricityNew ?? 0, water: b.waterNew ?? 0 };
-  }
-
   return (
     <div>
       <BackLink href="/hoa-don" label="Danh sách hóa đơn" />
@@ -67,7 +54,6 @@ export default async function NewBillPage({ searchParams }: { searchParams: { un
         units={units}
         profiles={profiles}
         defaultUnitId={searchParams.unitId}
-        lastReadings={lastReadings}
         defaultElectricityRate={setting?.defaultElectricityRate ?? DEFAULT_ELECTRICITY_RATE}
         defaultWaterRate={setting?.defaultWaterRate ?? DEFAULT_WATER_RATE}
       />

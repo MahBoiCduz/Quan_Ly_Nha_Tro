@@ -6,8 +6,11 @@ import { db } from "@/lib/db";
 import { getCurrentOrUpcomingLease } from "@/lib/rooms";
 import { normalizeLineItems, computeSubtotal, computeGrandTotal, computeMeterAmount } from "@/lib/billing";
 import { billGenerateSchema, billUpdateSchema } from "@/lib/bill-schema";
+import { parseTracking, replaceTracking, trackingError } from "@/lib/tracking-server";
+import { auth } from "@/auth";
 
 export async function generateBill(formData: FormData) {
+  if (!(await auth())?.user) return { error: "Vui lòng đăng nhập lại." };
   const parsed = billGenerateSchema.safeParse({
     type: formData.get("type") ?? undefined,
     unitId: formData.get("unitId"),
@@ -24,6 +27,8 @@ export async function generateBill(formData: FormData) {
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
   const d = parsed.data;
+  const tracking = parseTracking(formData, d.type);
+  if (!tracking.success) return { error: tracking.error.issues[0]?.message ?? "Kỳ không hợp lệ." };
 
   const unit = await db.unit.findUnique({
     where: { id: d.unitId },
@@ -33,6 +38,7 @@ export async function generateBill(formData: FormData) {
 
   const lease = getCurrentOrUpcomingLease(unit.leases);
   if (!lease) return { error: "Phòng chưa có khách thuê" };
+  if (formData.get("trackingLeaseId") !== lease.id) return { error: "Hợp đồng của phòng đã thay đổi. Vui lòng tải lại trước khi tạo hóa đơn." };
 
   // Totals are recomputed from the submitted quantity × unitPrice, never trusted.
   // Gate computations on type: elec_water skips line items, room skips meters.
@@ -42,7 +48,9 @@ export async function generateBill(formData: FormData) {
   const waterAmount = d.type === "room" ? 0 : computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
   const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
 
-  const bill = await db.bill.create({
+  let bill;
+  try { bill = await db.$transaction(async tx => {
+  const created = await tx.bill.create({
     data: {
       type: d.type,
       leaseId: lease.id,
@@ -64,8 +72,12 @@ export async function generateBill(formData: FormData) {
       billingProfileId: d.billingProfileId || null,
     },
   });
+  await replaceTracking(tx, created.id, tracking.data);
+  return created;
+  }); } catch (error) { return { error: trackingError(error) }; }
 
   revalidatePath("/hoa-don");
+  revalidatePath("/tracking-thanh-toan");
   revalidatePath("/so-sach");
   revalidatePath(`/phong/${unit.id}`);
   revalidatePath("/");
@@ -73,6 +85,7 @@ export async function generateBill(formData: FormData) {
 }
 
 export async function updateBill(billId: string, formData: FormData) {
+  if (!(await auth())?.user) return { error: "Vui lòng đăng nhập lại." };
   const parsed = billUpdateSchema.safeParse({
     type: formData.get("type") ?? undefined,
     unitId: formData.get("unitId"),
@@ -89,6 +102,8 @@ export async function updateBill(billId: string, formData: FormData) {
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
   const d = parsed.data;
+  const tracking = parseTracking(formData, d.type);
+  if (!tracking.success) return { error: tracking.error.issues[0]?.message ?? "Kỳ không hợp lệ." };
 
   const bill = await db.bill.findUnique({
     where: { id: billId },
@@ -108,7 +123,10 @@ export async function updateBill(billId: string, formData: FormData) {
   const waterAmount = d.type === "room" ? 0 : computeMeterAmount(d.waterOld, d.waterNew, d.waterRate);
   const grandTotal = computeGrandTotal(subtotal, electricityAmount, waterAmount);
 
-  await db.bill.update({
+  try { await db.$transaction(async tx => {
+  const fresh = await tx.bill.findUniqueOrThrow({ where: { id: billId }, include: { payments: true } });
+  if (fresh.payments.length || fresh.status === "paid") throw new Error("Kỳ không thể sửa vì hóa đơn đã có thanh toán.");
+  await tx.bill.update({
     where: { id: billId },
     data: {
       type: d.type,
@@ -130,8 +148,11 @@ export async function updateBill(billId: string, formData: FormData) {
       billingProfileId: d.billingProfileId || null,
     },
   });
+  await replaceTracking(tx, billId, tracking.data);
+  }); } catch (error) { return { error: trackingError(error) }; }
 
   revalidatePath("/hoa-don");
+  revalidatePath("/tracking-thanh-toan");
   revalidatePath(`/hoa-don/${billId}`);
   revalidatePath("/so-sach");
   revalidatePath(`/phong/${bill.lease.unitId}`);
@@ -139,18 +160,21 @@ export async function updateBill(billId: string, formData: FormData) {
 }
 
 export async function deleteBill(id: string) {
+  if (!(await auth())?.user) return { error: "Vui lòng đăng nhập lại." };
   const bill = await db.bill.findUnique({
     where: { id },
-    include: { lease: { select: { unitId: true } } },
+    include: { payments: true, lease: { select: { unitId: true } } },
   });
   if (!bill) return { error: "Không tìm thấy hóa đơn" };
-  if (bill.status === "paid") return { error: "Hóa đơn đã thanh toán, không thể xóa" };
-  // Delete the bill's payments first (no cascade on the relation), then the bill.
-  await db.$transaction([
-    db.payment.deleteMany({ where: { billId: id } }),
-    db.bill.delete({ where: { id } }),
-  ]);
+  if (bill.status === "paid" || bill.payments.length > 0) return { error: "Hóa đơn đã có thanh toán, không thể xóa" };
+  // Paid bills are protected; unpaid bills cascade their tracking periods.
+  try { await db.$transaction(async tx => {
+    const fresh = await tx.bill.findUniqueOrThrow({ where: { id }, include: { payments: true } });
+    if (fresh.payments.length || fresh.status === "paid") throw new Error("Hóa đơn đã có thanh toán, không thể xóa");
+    await tx.bill.delete({ where: { id } });
+  }); } catch { return { error: "Không thể xóa hóa đơn đã có thanh toán. Vui lòng tải lại." }; }
   revalidatePath("/hoa-don");
+  revalidatePath("/tracking-thanh-toan");
   revalidatePath("/so-sach");
   revalidatePath(`/phong/${bill.lease.unitId}`);
   return { ok: true };

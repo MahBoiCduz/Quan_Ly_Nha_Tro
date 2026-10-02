@@ -10,6 +10,18 @@
  * enough to send over Zalo.
  */
 export const INVOICE_IMAGE_TARGET_WIDTH = 1654;
+export const INVOICE_MOBILE_TARGET_WIDTH = 1080;
+
+/** Last visible row plus a bottom margin; blank pages keep their original size. */
+export function trimmedImageHeight(pixels: Uint8ClampedArray, width: number, height: number, padding: number) {
+  for (let y = height - 1; y >= 0; y--) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      if (pixels[i + 3] > 0 && (pixels[i] < 245 || pixels[i + 1] < 245 || pixels[i + 2] < 245)) return Math.min(height, y + 1 + padding);
+    }
+  }
+  return height;
+}
 
 /** Formats the browser pipeline can encode. The UI currently exposes PNG only. */
 export type InvoiceImageFormat = "image/png" | "image/jpeg";

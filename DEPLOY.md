@@ -78,6 +78,8 @@ Local (file `dev.db`) thì bỏ qua 2 biến trên. Tham số: `<email> <mật k
 
 ## Lưu ý
 
+- **Tracking thanh toán theo tháng**: sao lưu DB trước, rồi áp migration `20261001010000_bill_tracking_periods` bằng `node scripts/push-turso-schema.mjs 20261001010000_bill_tracking_periods` trước khi deploy code mới. Migration chỉ thêm bảng/index; không tự suy đoán kỳ của hoá đơn cũ. Sau deploy, đối chiếu danh sách chưa gán kỳ và gán thủ công trên chi tiết hoá đơn. Với DB local, dùng `node scripts/apply-tracking-local.mjs` (tự backup, từ chối remote).
+
 - **Ảnh CCCD trên Vercel Blob là public URL** (link ngẫu nhiên, khó đoán nhưng về kỹ thuật ai có link đều xem được). Với dữ liệu CCCD nhạy cảm, nếu cần chặt hơn có thể proxy qua route có xác thực — báo mình làm thêm sau.
 - **Khi đổi schema sau này**: mỗi migration mới trong `prisma/migrations/` phải được áp lên Turso **trước khi** deploy code dùng schema đó (deploy Vercel KHÔNG tự chạy migration). Áp đúng migration còn thiếu bằng script (chạy được trên Windows):
 

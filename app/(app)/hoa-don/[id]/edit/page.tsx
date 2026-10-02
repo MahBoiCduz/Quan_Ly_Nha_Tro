@@ -16,6 +16,7 @@ export default async function EditBillPage({ params }: { params: { id: string } 
     where: { id: params.id },
     include: {
       payments: true,
+      trackingPeriods: true,
       lease: { include: { unit: true } },
     },
   });
@@ -45,6 +46,8 @@ export default async function EditBillPage({ params }: { params: { id: string } 
     waterOld: bill.waterOld ?? 0,
     waterNew: bill.waterNew ?? 0,
     waterRate: bill.waterRate ?? 0,
+    roomMonths: bill.trackingPeriods.filter(p => p.category === "room").map(p => p.month),
+    utilityMonths: bill.trackingPeriods.filter(p => p.category === "elec_water").map(p => p.month),
   };
 
   return (

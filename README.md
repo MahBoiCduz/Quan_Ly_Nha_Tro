@@ -113,19 +113,43 @@ Mỗi dòng hoá đơn có **2 trục số lượng**: **SL** (số người ở
 - Hoá đơn **đã tạo** giữ nguyên số tiền: sửa giá/xe/số người ở trang phòng không làm đổi
   hoá đơn cũ, và hoá đơn cũ (chưa có `months`) in ra y như trước.
 
+## Tracking thanh toán theo tháng
+
+`/tracking-thanh-toan` hiển thị phòng × 12 tháng, tách tiền phòng/dịch vụ và điện/nước.
+Kỳ đã trả đủ ẩn trong form tạo; kỳ đã lập nhưng còn thiếu dẫn về hoá đơn cũ.
+Chọn nhiều tháng qua năm không mất lựa chọn; điện/nước phải là kỳ liên tiếp.
+Hoá đơn cũ có nút **Gán / sửa kỳ tracking**, chỉ cập nhật kỳ và không sửa tiền.
+Phòng 303 trong DB demo giữ các ví dụ chưa gán kỳ để kiểm tra luồng đối chiếu.
+
+Sau khi lấy code mới: `node scripts/apply-tracking-local.mjs` bổ sung bảng tracking
+vào DB local đang cấu hình, có backup và chạy lại an toàn. Script từ chối remote.
+`node scripts/demo-tracking.mjs` chỉ bổ sung kỳ cho DB giả `prisma/demo.db`.
+Khởi động lại dev server sau thay đổi schema/server action.
+
 ## Xuất hoá đơn
 
 Trên trang chi tiết hoá đơn, nút **"Xuất hoá đơn"** cho 2 lựa chọn:
 
 - **Tải PDF** — render server-side, đúng mẫu hoá đơn của gia đình (bảng dịch vụ,
   bảng chỉ số điện/nước, thông tin ngân hàng + QR).
-- **Ảnh PNG (nét)** — ảnh 1654×2340 px (≈200 DPI), tạo **ngay trên trình duyệt**
-  từ chính PDF đó nên giống hệt bản PDF, tiện gửi Zalo cho khách. Không cần
-  server, không thêm thư viện native.
+- **Ảnh PNG (điện thoại)** — ảnh dọc rộng 1080px, chữ lớn và tổng tiền ở đầu,
+  khoản thu kèm công thức phía dưới, điện/nước từng khối. Tạo trên trình duyệt
+  từ layout mobile của cùng dữ liệu hoá đơn, tiện gửi Zalo. Chiều cao theo nội
+  dung; nhiều dòng có thể xuất nhiều ảnh. PDF tải xuống vẫn là A4.
 
 > Ảnh dùng `pdfjs-dist` ở client; worker của nó được phục vụ tĩnh từ
 > `public/pdf.worker.min.mjs` (tự copy bằng `npm run sync:pdf-worker`, chạy kèm
 > `predev`/`prebuild`) vì webpack không bundle được file worker `.mjs`.
+
+Mẫu in A4, font/màu/khoảng cách được cấu hình trong `INVOICE_THEME` và
+`StyleSheet` tại `lib/invoice-pdf.tsx`. Mẫu có người thuê, hạn thanh toán, kỳ riêng
+cho từng bảng, chỉ số cũ/mới và tổng tiền nổi bật. Dòng tiền không bị tách đôi
+khi sang trang; hoá đơn thông thường 5 dòng dịch vụ + điện/nước + QR vừa 1 trang.
+Thông tin ngân hàng, ảnh QR và ghi chú vẫn sửa tại **Cài đặt → Hồ sơ thu tiền**;
+hồ sơ trên hoá đơn ưu tiên trước hồ sơ phòng và hồ sơ mặc định. Mẫu PNG nằm ở
+`lib/invoice-mobile-pdf.tsx`; tải riêng và xuất lô dùng cùng mẫu mobile.
+PNG không hiển thị khối chuyển khoản/QR; các nội dung hoá đơn còn lại giữ nguyên.
+Tiền trên cả hai mẫu luôn lấy từ snapshot hoá đơn đã lưu.
 
 ### Xuất theo lô (cả tháng một lượt)
 

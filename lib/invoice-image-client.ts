@@ -5,7 +5,7 @@
 // component, route handler or server action.
 
 import type { InvoiceImageFormat } from "./invoice-image";
-import { INVOICE_IMAGE_TARGET_WIDTH, scaleForTargetWidth } from "./invoice-image";
+import { INVOICE_IMAGE_TARGET_WIDTH, INVOICE_MOBILE_TARGET_WIDTH, scaleForTargetWidth, trimmedImageHeight } from "./invoice-image";
 
 export type RenderedInvoiceImage = {
   blob: Blob;
@@ -22,11 +22,12 @@ export type RenderInvoiceOptions = {
   mimeType?: InvoiceImageFormat;
   /** JPEG quality (ignored for PNG). */
   quality?: number;
+  trimBottom?: boolean;
 };
 
 /** Downloads the invoice PDF for a bill, keeping the current session cookie. */
-export async function fetchInvoicePdf(billId: string): Promise<ArrayBuffer> {
-  const res = await fetch(`/hoa-don/${billId}/pdf`, { credentials: "same-origin" });
+export async function fetchInvoicePdf(billId: string, layout: "print" | "mobile" = "print"): Promise<ArrayBuffer> {
+  const res = await fetch(`/hoa-don/${billId}/pdf${layout === "mobile" ? "?layout=mobile" : ""}`, { credentials: "same-origin" });
   if (res.status === 404) throw new Error("Không tìm thấy hoá đơn.");
   if (!res.ok) throw new Error(`Không tải được hoá đơn (mã ${res.status}).`);
 
@@ -76,8 +77,20 @@ export async function renderInvoiceImages(
       context.imageSmoothingQuality = "high";
 
       await page.render({ canvasContext: context, viewport }).promise;
+      let output = canvas;
+      if (options.trimBottom) {
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const height = trimmedImageHeight(pixels, canvas.width, canvas.height, Math.ceil(targetWidth / 18));
+        if (height < canvas.height) {
+          output = document.createElement("canvas");
+          output.width = canvas.width; output.height = height;
+          const cropped = output.getContext("2d");
+          if (!cropped) throw new Error("Trình duyệt không hỗ trợ canvas 2D.");
+          cropped.drawImage(canvas, 0, 0);
+        }
+      }
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, mimeType, quality),
+        output.toBlob(resolve, mimeType, quality),
       );
       page.cleanup();
 
@@ -86,15 +99,22 @@ export async function renderInvoiceImages(
         blob,
         pageIndex: pageNumber - 1,
         pageCount: pdf.numPages,
-        width: canvas.width,
-        height: canvas.height,
+        width: output.width,
+        height: output.height,
       });
+      canvas.width = 0; canvas.height = 0;
+      if (output !== canvas) { output.width = 0; output.height = 0; }
     }
   } finally {
     await pdf.destroy();
   }
 
   return images;
+}
+
+/** Shared mobile PNG layout for both single downloads and batch exports. */
+export async function renderMobileInvoiceImages(billId: string) {
+  return renderInvoiceImages(await fetchInvoicePdf(billId, "mobile"), { targetWidth: INVOICE_MOBILE_TARGET_WIDTH, trimBottom: true });
 }
 
 /** Triggers a browser download for an already-generated blob. */

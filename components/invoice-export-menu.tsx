@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, FileDown, Image as ImageIcon } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { buildInvoicePngFilename } from "@/lib/invoice-image";
-import { downloadBlob, fetchInvoicePdf, renderInvoiceImages } from "@/lib/invoice-image-client";
+import { downloadBlob, renderMobileInvoiceImages } from "@/lib/invoice-image-client";
 
 /**
  * "Xuất hoá đơn" menu: the original PDF download plus a PNG export that is
- * rasterised in the browser from that same PDF.
+ * rasterised in the browser from the shared model's mobile layout.
  */
 export function InvoiceExportMenu({
   billId,
@@ -44,8 +44,7 @@ export function InvoiceExportMenu({
     setOpen(false);
     setBusy(true);
     try {
-      const pdf = await fetchInvoicePdf(billId);
-      const images = await renderInvoiceImages(pdf);
+      const images = await renderMobileInvoiceImages(billId);
       for (const image of images) {
         downloadBlob(
           image.blob,
@@ -95,7 +94,7 @@ export function InvoiceExportMenu({
             onClick={exportPng}
             className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-ink hover:bg-cream"
           >
-            <ImageIcon size={16} className="text-muted" /> Ảnh PNG (nét)
+            <ImageIcon size={16} className="text-muted" /> Ảnh PNG (điện thoại)
           </button>
         </div>
       )}

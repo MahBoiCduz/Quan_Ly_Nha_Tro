@@ -1,14 +1,15 @@
 import { test, expect } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 const EMAIL = process.env.SEED_ADMIN_EMAIL ?? "admin@nhatro.local";
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "doimatkhau";
 
-async function login(page) {
+async function login(page: Page) {
   await page.goto("/login");
   await page.getByPlaceholder("Email").fill(EMAIL);
   await page.getByPlaceholder("Mật khẩu").fill(PASSWORD);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
-  await expect(page).toHaveURL("http://localhost:3000/");
+  await expect(page).toHaveURL(/\/$/);
 }
 
 test("admin can add a tenant, lease a room, bill it, and record a payment", async ({ page }) => {
@@ -32,8 +33,10 @@ test("admin can add a tenant, lease a room, bill it, and record a payment", asyn
   // Generate a bill — /hoa-don/new only lists occupied rooms
   await page.goto("/hoa-don/new");
   await page.locator('select[name="unitId"]').selectOption({ label: "Phòng 201" });
-  await page.getByPlaceholder("Kì thanh toán (vd: Tháng 6/2026)").fill("Tháng 6/2026");
-  await page.locator('input[name="dueDate"]').fill("2026-06-05");
+  await page.getByRole("button", { name: "Tiền phòng", exact: true }).click();
+  await page.getByRole("spinbutton", { name: "Năm ghi nhận" }).fill("2030");
+  await page.getByRole("button", { name: "Tiền phòng tháng 6/2030", exact: true }).click();
+  await page.locator('input[name="dueDate"]').fill("2030-06-05");
   await page.getByRole("button", { name: "Tạo hóa đơn" }).click();
   // Redirects to /hoa-don/[id] — bill detail page with PaymentPanel
 
@@ -46,5 +49,5 @@ test("admin can add a tenant, lease a room, bill it, and record a payment", asyn
 
   // It appears in the ledger
   await page.goto("/so-sach");
-  await expect(page.getByText("Phòng 201 - Tháng 6/2026")).toBeVisible();
+  await expect(page.getByText("Phòng 201 - Tháng 6/2030")).toBeVisible();
 });

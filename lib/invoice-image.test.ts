@@ -4,7 +4,21 @@ import {
   INVOICE_IMAGE_TARGET_WIDTH,
   sanitizeFilenamePart,
   scaleForTargetWidth,
+  trimmedImageHeight,
 } from "./invoice-image";
+
+describe("mobile image bottom crop", () => {
+  it("keeps visible ink and padding, ignores transparent pixels and never grows the image", () => {
+    const pixels = new Uint8ClampedArray(4 * 10 * 4).fill(255);
+    const ink = (2 * 4 + 1) * 4;
+    pixels[ink] = 0;
+    const transparent = (9 * 4 + 1) * 4;
+    pixels[transparent] = 0; pixels[transparent + 3] = 0;
+    expect(trimmedImageHeight(pixels, 4, 10, 2)).toBe(5);
+    expect(trimmedImageHeight(pixels, 4, 10, 20)).toBe(10);
+    expect(trimmedImageHeight(new Uint8ClampedArray(4 * 10 * 4).fill(255), 4, 10, 2)).toBe(10);
+  });
+});
 
 describe("sanitizeFilenamePart", () => {
   it("strips Vietnamese diacritics", () => {
