@@ -13,6 +13,7 @@ import { Pencil } from "lucide-react";
 import { formatMonths } from "@/lib/tracking";
 import { TrackingAssignment } from "./tracking-assignment";
 import { ResponsiveDetails } from "@/components/responsive-details";
+import { invoiceServiceUnit } from "@/lib/invoice-service-unit";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ const STATUS_LABEL: Record<string, string> = { unpaid: "Chưa thu", paid: "Đã 
 export default async function BillDetailPage({ params }: { params: { id: string } }) {
   const bill = await db.bill.findUnique({
     where: { id: params.id },
-    include: { trackingPeriods: true, lease: { include: { unit: true, tenant: true } }, payments: { orderBy: { paidAt: "asc" } } },
+    include: { trackingPeriods: true, lease: { include: { unit: { include: { serviceItems: { select: { name: true, measureUnit: true } } } }, tenant: true } }, payments: { orderBy: { paidAt: "asc" } } },
   });
   if (!bill) notFound();
 
@@ -97,7 +98,7 @@ export default async function BillDetailPage({ params }: { params: { id: string 
                 {items.map((it, i) => (
                   <tr key={i} className="border-b border-line hover:bg-cream">
                     <td className="px-3 py-2 text-ink">{it.name}</td>
-                    <td className="px-3 py-2 text-center text-ink">{it.measureUnit}</td>
+                    <td className="px-3 py-2 text-center text-ink">{invoiceServiceUnit(it, bill.lease.unit.serviceItems)}</td>
                     <td className="px-3 py-2 text-center text-ink">{it.quantity}</td>
                     {/* Old bills were created when quantity itself counted the
                         months, so they carry no `months` → show a dash. */}
